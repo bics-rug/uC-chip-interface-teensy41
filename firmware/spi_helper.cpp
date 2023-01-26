@@ -43,11 +43,19 @@ void configure_spi(int id, uint8_t config_option, uint8_t data){
               }
             }
             else{
+              packet_t out;
               switch (id){
                 case 0: 
                   if (reserve_input_pin(12) && reserve_output_pin(11) && reserve_output_pin(13)){
                     SPI.begin();
-                    spi0_active = 1;                    
+                    spi0_active = 1;
+                    // if (is_output_buffer_not_full()) {
+                    //   output_ring_buffer[output_ring_buffer_next_free].pin.header = OUT_SUCCESS_PIN_CONFIGURED;
+                    //   output_ring_buffer[output_ring_buffer_next_free].pin.exec_time = micros()-offset_time;
+                    //   output_ring_buffer[output_ring_buffer_next_free].pin.id = data;
+                    //   output_ring_buffer[output_ring_buffer_next_free].pin.value = OUTPUT;
+                    //   output_ring_buffer_next_free = (output_ring_buffer_next_free + 1) % OUTPUT_BUFFER_SIZE;
+                    // }                 
                   }
                   break;               
                 case 1: 

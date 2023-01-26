@@ -56,7 +56,6 @@ class Pins:
         status = Data32bitPacket(header = Data32bitHeader.IN_READ_LAST)
         self.serialPort.write(status.to_bytearray())
 
-        # return status header.
         return (Packet.from_bytearray(self.serialPort.read(size = len(status.to_bytearray()))))._header
 
     """
