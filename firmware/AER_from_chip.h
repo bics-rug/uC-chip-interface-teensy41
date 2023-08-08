@@ -26,7 +26,11 @@
 #include "pin_helper.h"
 #include "datatypes.h"
 
-
+enum AER_from_chip_types : uint8_t {
+    AER_FULL_CUSTOM = 0U,
+    //AER_TEENSY_BANK = 1U,
+    AER_MCP23017 = 2U,
+}
 
 class AER_from_chip {
     /*
@@ -60,6 +64,8 @@ class AER_from_chip {
     static volatile bool hs_lowactive[8];
     static volatile bool data_lowactive[8];
     static volatile bool active[8];
+    static volatile uint8_t type[8];
+    static volatile uint8_t port[8];
     /*
         the pointers to the interface instantces after activation.
     */
@@ -93,7 +99,7 @@ class AER_from_chip {
     void handshake();
 
     // ---------------------------------------------------- Declaring private methods --------------------------------------------------
-    private:
+    protected:
     
     uint32_t getData();
     //----------------------------------------------------------------------------------------------------------------------------------
@@ -114,6 +120,24 @@ class AER_from_chip {
 
 };
 
+class AER_from_chip_mcp23017 : public AER_from_chip {
 
+    public:
+        /*
+        the configure class method handles incomming configuration packets, and also instatiactes the class on activation
+        requires:
+            id - the id of the interface the config is intended for
+            config - the config sub header that determines what is configured
+            data - the associated data to the configuration (if required by the config otherwise ignored)
+    */
+    AER_from_chip_mcp23017(uint8_t id, uint8_t reqPin, uint8_t ackPin, uint8_t i2c_port = 0, uint8_t dataPins[], uint8_t numDataPins, uint8_t delay = 0, 
+                bool activeLow = false, bool dataActiveLow = false);
+
+    protected:
+    
+    uint32_t getData();
+    bool setupPins();
+
+}
 
 #endif
