@@ -473,6 +473,12 @@ enum outPacketHeader : uint8_t {
    uses 
   */
   OUT_ERROR_AER_HS_TIMEOUT = 209U,
+  /*
+   this error is thrown when a peripheral interface is not ready
+   For example: the I2C for the MCP23017 is not ready
+   uses 
+  */
+  OUT_ERROR_PERIPHERAL_INTERFACE_NOT_READY = 210U,
  /*
    this packet is used to destinguish between an empty and a full buffer
    uses data

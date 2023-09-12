@@ -56,7 +56,6 @@ void AER_from_chip::configure(uint8_t id, uint8_t config, uint8_t data){
           AER_from_chip::inst[id] = new AER_from_chip_mcp23017(id,
                                           AER_from_chip::req_pin[id],
                                           AER_from_chip::ack_pin[id],
-                                          AER_from_chip::port[id],
                                           AER_from_chip::data_pins[id],
                                           AER_from_chip::data_width[id],
                                           AER_from_chip::req_delay[id],
@@ -302,15 +301,32 @@ uint32_t AER_from_chip::getData() {
 //----------------------------------------------------------------------------------------------------------------------------------
 
 bool AER_from_chip_mcp23017::setupPins() {
+
+if (!mcp.begin_I2C()) {
+  if (is_output_buffer_not_full()){
+          output_ring_buffer[output_ring_buffer_next_free].error.header = OUT_ERROR_PERIPHERAL_INTERFACE_NOT_READY;
+          output_ring_buffer[output_ring_buffer_next_free].error.org_header = CONF_ACTIVE;
+          output_ring_buffer[output_ring_buffer_next_free].error.value = _id;
+          output_ring_buffer_next_free = (output_ring_buffer_next_free + 1) % OUTPUT_BUFFER_SIZE;          
+        }
+    return false;
+}
+else{
+// reserving
+if (!reserve_input_pin(I2C_SDA_PORT)) return false;
+if (!reserve_input_pin(I2C_SCL_PORT)) return false;
+
+for(int i = 0; i < _numDataPins; i++) {
+    mcp.pinMode(_dataPins[i], INPUT);
+  }
+}
+
 if (reserve_input_pin(_reqPin)) pinMode(_reqPin, INPUT);
-else return false;
+else  return false;
 if (reserve_output_pin(_ackPin)) pinMode(_ackPin, OUTPUT);
 else return false;
 
-  for(int i = 0; i < _numDataPins; i++) {
-    if (reserve_input_pin(_dataPins[i])) pinMode(_dataPins[i], INPUT);
-    else return false;
-  }
+
   return true;
 }
 
@@ -319,73 +335,21 @@ else return false;
 // getData: Retrieves event
 //---------------------------------------------------------------------------------------------------------------------------------------
 
+
 uint32_t AER_from_chip_mcp23017::getData() {
   uint32_t data = 0;
   if (_delay) {
     delay20ns(_delay);
   }
-  for (int i = 0; i < _numDataPins; i++) {
-    data |= digitalReadFast(_dataPins[i]) << i; // @todo read with direct pin access
-  }
+
+  data = mcp.readGPIOAB();
+  // for (int i = 0; i < _numDataPins; i++) {
+  //   data |= digitalReadFast(_dataPins[i]) << i; // @todo read with direct pin access
+  // }
   if (_dataActiveLow) {
     return ~data;
   }
   else {
     return data;
   }
-}
-
-AER_from_chip_mcp23017::AER_from_chip(uint8_t id, uint8_t reqPin, uint8_t ackPin, uint8_t i2c_port = 0, uint8_t dataPins[], uint8_t numDataPins, uint8_t delay, bool handshakeActiveLow, bool dataActiveLow) {
-  _reqPin = reqPin;
-  _ackPin = ackPin;
-  _dataPins = dataPins;
-  _numDataPins = numDataPins;
-  _delay = delay;
-  _handshakeActiveLow = handshakeActiveLow;
-  _dataActiveLow = dataActiveLow;
-  _id = id;
-
-  if (setupPins()){ 
-    switch(_id){
-      case 0: 
-        attachInterrupt(digitalPinToInterrupt(reqPin), aer0_ISR, CHANGE); 
-        AER_from_chip_mcp23017::active[id] = true;
-        break;
-      case 1: 
-        attachInterrupt(digitalPinToInterrupt(reqPin), aer1_ISR, CHANGE); 
-        AER_from_chip_mcp23017::active[id] = true;
-        break;
-      case 2: 
-        attachInterrupt(digitalPinToInterrupt(reqPin), aer2_ISR, CHANGE); 
-        AER_from_chip_mcp23017::active[id] = true;
-        break;
-      case 3: 
-        attachInterrupt(digitalPinToInterrupt(reqPin), aer3_ISR, CHANGE); 
-        AER_from_chip_mcp23017::active[id] = true;
-        break;
-      case 4: 
-        attachInterrupt(digitalPinToInterrupt(reqPin), aer4_ISR, CHANGE); 
-        AER_from_chip_mcp23017::active[id] = true;
-        break;
-      case 5: 
-        attachInterrupt(digitalPinToInterrupt(reqPin), aer5_ISR, CHANGE); 
-        AER_from_chip_mcp23017::active[id] = true;
-        break;
-      case 6: 
-        attachInterrupt(digitalPinToInterrupt(reqPin), aer6_ISR, CHANGE); 
-        AER_from_chip_mcp23017::active[id] = true;
-        break;
-      case 7: 
-        attachInterrupt(digitalPinToInterrupt(reqPin), aer7_ISR, CHANGE); 
-        AER_from_chip_mcp23017::active[id] = true;
-        break;
-      default:
-        if (is_output_buffer_not_full()){
-          output_ring_buffer[output_ring_buffer_next_free].error.header = OUT_ERROR_UNKNOWN_CONFIGURATION;
-          output_ring_buffer[output_ring_buffer_next_free].error.org_header = CONF_ACTIVE;
-          output_ring_buffer[output_ring_buffer_next_free].error.value = id;
-          output_ring_buffer_next_free = (output_ring_buffer_next_free + 1) % OUTPUT_BUFFER_SIZE;          
-        }
-    }
-  } 
 }

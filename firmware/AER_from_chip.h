@@ -25,12 +25,19 @@
 #include "ring_buffer.h"
 #include "pin_helper.h"
 #include "datatypes.h"
+#include <Adafruit_MCP23X17.h>
 
+enum I2C_PORTS_TEENSY : uint8_t {
+  I2C_SCL_PORT = 19U,
+  I2C_SDA_PORT = 18U,
+  I2C_SDA1_PORT = 17U,
+  I2C_SCL1_PORT = 16U,
+};
 enum AER_from_chip_types : uint8_t {
     AER_FULL_CUSTOM = 0U,
     //AER_TEENSY_BANK = 1U,
     AER_MCP23017 = 2U,
-}
+};
 
 class AER_from_chip {
     /*
@@ -121,23 +128,13 @@ class AER_from_chip {
 };
 
 class AER_from_chip_mcp23017 : public AER_from_chip {
-
-    public:
-        /*
-        the configure class method handles incomming configuration packets, and also instatiactes the class on activation
-        requires:
-            id - the id of the interface the config is intended for
-            config - the config sub header that determines what is configured
-            data - the associated data to the configuration (if required by the config otherwise ignored)
-    */
-    AER_from_chip_mcp23017(uint8_t id, uint8_t reqPin, uint8_t ackPin, uint8_t i2c_port = 0, uint8_t dataPins[], uint8_t numDataPins, uint8_t delay = 0, 
-                bool activeLow = false, bool dataActiveLow = false);
-
+    using AER_from_chip::AER_from_chip;
     protected:
     
+    Adafruit_MCP23X17 mcp;
     uint32_t getData();
     bool setupPins();
 
-}
+};
 
 #endif
