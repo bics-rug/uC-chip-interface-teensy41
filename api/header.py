@@ -561,6 +561,11 @@ class ConfigSubHeader(enum.IntEnum):
     """
     CONF_DATA_ACTIVE_LOW = 75
     """
+    interface_type
+    - value type id (see interface doc) - default is 0
+    """
+    CONF_TYPE = 76
+    """
      setting the pin for AER data channel X
      uses config
       - value is the pin ID
