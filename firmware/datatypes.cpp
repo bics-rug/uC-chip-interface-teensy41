@@ -17,6 +17,7 @@
 */
 
 #include "datatypes.h"
+#include "ring_buffer.h"
 
 // function to copy packet content from volotile to not volotile
 packet_t copy_packet(volatile packet_t* in){

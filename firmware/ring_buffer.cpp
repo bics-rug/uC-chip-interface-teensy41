@@ -121,4 +121,59 @@ void send_input_ring_buffer(){
 
 }
 
+void send_data32(uint8_t header, uint32_t value){
+  if (is_output_buffer_not_full() && offset_time != 0) {
+    noInterrupts();
+    output_ring_buffer[output_ring_buffer_next_free].data.header = header;
+    output_ring_buffer[output_ring_buffer_next_free].data.exec_time = micros()-offset_time;
+    output_ring_buffer[output_ring_buffer_next_free].data.value = value;
+    output_ring_buffer_next_free = (output_ring_buffer_next_free + 1) % OUTPUT_BUFFER_SIZE;
+    interrupts(); 
+  }   
+}
 
+void send_data8(uint8_t header, uint8_t value){
+  if (is_output_buffer_not_full() && offset_time != 0) {
+    noInterrupts();
+    output_ring_buffer[output_ring_buffer_next_free].data_8.header = header;
+    output_ring_buffer[output_ring_buffer_next_free].data_8.exec_time = micros()-offset_time;
+    output_ring_buffer[output_ring_buffer_next_free].data_8.value = value;
+    output_ring_buffer_next_free = (output_ring_buffer_next_free + 1) % OUTPUT_BUFFER_SIZE;
+    interrupts();   
+  } 
+}
+
+void send_pin(uint8_t header, uint8_t id, uint8_t value){
+  if (is_output_buffer_not_full() && offset_time != 0) {
+    noInterrupts();
+    output_ring_buffer[output_ring_buffer_next_free].pin.header = header;
+    output_ring_buffer[output_ring_buffer_next_free].pin.exec_time = micros()-offset_time;
+    output_ring_buffer[output_ring_buffer_next_free].pin.id = id;
+    output_ring_buffer[output_ring_buffer_next_free].pin.value = value;
+    output_ring_buffer_next_free = (output_ring_buffer_next_free + 1) % OUTPUT_BUFFER_SIZE;
+    interrupts();   
+  } 
+}
+
+void error_message(uint8_t error_header, uint8_t source_header, uint32_t value){
+  if (is_output_buffer_not_full()){
+    noInterrupts();
+    output_ring_buffer[output_ring_buffer_next_free].error.header = error_header;
+    output_ring_buffer[output_ring_buffer_next_free].error.org_header = source_header;
+    output_ring_buffer[output_ring_buffer_next_free].error.value = value;
+    output_ring_buffer_next_free = (output_ring_buffer_next_free + 1) % OUTPUT_BUFFER_SIZE;
+    interrupts();          
+  }
+}
+
+void error_message(uint8_t error_header, uint8_t source_header){
+  error_message(error_header,source_header,micros()-offset_time);
+}
+
+void error_message_bypass_buffer(uint8_t error_header, uint8_t source_header, uint32_t value){
+  packet_t error_packet;
+  error_packet.error.header = error_header;
+  error_packet.error.org_header = source_header;
+  error_packet.error.value = value;
+  Serial.write(error_packet.bytes, sizeof(packet_t));
+}

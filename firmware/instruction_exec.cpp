@@ -63,21 +63,9 @@ void exec_instruction(packet_t* instruction, bool is_ISR_call) {
   case IN_CONF_AER_FROM_CHIP6: AER_from_chip::configure(6,instruction->config.config_header,instruction->config.value); break;
   case IN_CONF_AER_FROM_CHIP7: AER_from_chip::configure(7,instruction->config.config_header,instruction->config.value); break;
   default:   
-    packet_t error_packet;
-    error_packet.error.header = OUT_ERROR_UNKNOWN_INSTRUCTION;
-    error_packet.error.org_header = instruction->data.header;
-    error_packet.error.value = instruction->data.value;
-    if (is_ISR_call) {
-      if (is_output_buffer_not_full()){
-        noInterrupts();
-        output_ring_buffer[output_ring_buffer_next_free] = error_packet;
-        output_ring_buffer_next_free = (output_ring_buffer_next_free + 1) % OUTPUT_BUFFER_SIZE;       
-        interrupts();   
-      }
-    }
-    else{
-      Serial.write(error_packet.bytes, sizeof(packet_t));
-    } break;
+    if (is_ISR_call) error_message(OUT_ERROR_UNKNOWN_INSTRUCTION,instruction->data.header,instruction->data.value);
+    else error_message_bypass_buffer(OUT_ERROR_UNKNOWN_INSTRUCTION,instruction->data.header,instruction->data.value);
+    break;
   }
 }
 
@@ -93,11 +81,6 @@ void exec_timed_commands(){
   while (
     (input_ring_buffer_start % INPUT_BUFFER_SIZE != input_ring_buffer_next_free) &&
      instruction.data.exec_time <= current_time ) {
-    if (instruction.pin.id == 0) {
-      pinMode(13, OUTPUT);
-      digitalWrite(13, HIGH);
-    }
-    //if (instruction.pin.value == 1)
     interrupts();
     exec_instruction(&instruction,true);
     noInterrupts();
@@ -120,19 +103,6 @@ void set_time_offset(uint32_t offset){
 }
 
 void read_time(bool is_ISR_call){
-  packet_t time_packet;
-  time_packet.error.header = OUT_ERROR_UNKNOWN_INSTRUCTION;
-  time_packet.error.org_header = OUT_ERROR_UNKNOWN_INSTRUCTION; 
-  time_packet.error.value = micros();
-  if (is_ISR_call) {
-    noInterrupts();
-    if (is_output_buffer_not_full()){
-      output_ring_buffer[output_ring_buffer_next_free] = time_packet;
-      output_ring_buffer_next_free = (output_ring_buffer_next_free + 1) % OUTPUT_BUFFER_SIZE;          
-    }
-    interrupts();
-  }
-  else{
-    Serial.write(time_packet.bytes, sizeof(packet_t));
-  }
+  if (is_ISR_call) error_message(OUT_ERROR_UNKNOWN_INSTRUCTION,OUT_ERROR_UNKNOWN_INSTRUCTION);
+  else error_message_bypass_buffer(OUT_ERROR_UNKNOWN_INSTRUCTION,OUT_ERROR_UNKNOWN_INSTRUCTION,micros());
 }

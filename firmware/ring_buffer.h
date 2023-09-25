@@ -48,8 +48,11 @@ bool is_output_buffer_not_full();
 void send_output_ring_buffer();
 void send_output_ring_buffer_last();
 void send_input_ring_buffer();
-
-
-
+void error_message(uint8_t error_header, uint8_t source_header, uint32_t value);
+void error_message(uint8_t error_header, uint8_t source_header);
+void send_pin(uint8_t header, uint8_t id, uint8_t value);
+void send_data8(uint8_t header, uint8_t value);
+void send_data32(uint8_t header, uint32_t value);
+void error_message_bypass_buffer(uint8_t error_header, uint8_t source_header, uint32_t value);
 
 #endif

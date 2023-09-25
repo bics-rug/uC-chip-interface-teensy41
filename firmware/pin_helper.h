@@ -25,26 +25,37 @@
 #include "ring_buffer.h"
 #include "isr_helper.h"
 
+
+#if defined(ARDUINO_TEENSY41)
+#define NUMBER_OF_DIGITAL_PINS 55
+#elif defined(ARDUINO_TEENSY40)
+#define NUMBER_OF_DIGITAL_PINS 40
+#elif defined(ARDUINO_SAMD_MKRZERO)
+#define NUMBER_OF_DIGITAL_PINS 22
+#else 
+#define NUMBER_OF_DIGITAL_PINS 12
+#endif
+
 /*
  the Pin helper tracks the usage and configuration off all the pins.
  and changes thier state
 */
 
 // the usage of pins, to avoid double use
-extern volatile bool input_pin_active[55];
-extern volatile bool output_pin_active[55];
+extern volatile bool input_pin_active[NUMBER_OF_DIGITAL_PINS];
+extern volatile bool output_pin_active[NUMBER_OF_DIGITAL_PINS];
 
 /*
  register a pin as input, changes the direction of the uC acordingly
  retuns true if sucessfull, false if pin was previously registered for something else.
 */
-bool reserve_input_pin(uint8_t id);
+bool reserve_input_pin(uint8_t id, uint8_t from_instruction = OUT_ERROR_PIN_ALREADY_INUSE);
 
 /*
  register a pin as output, changes the direction of the uC acordingly
  retuns true if sucessfull, false if pin was previously registered for something else.
 */
-bool reserve_output_pin(uint8_t id);
+bool reserve_output_pin(uint8_t id, uint8_t from_instruction = OUT_ERROR_PIN_ALREADY_INUSE);
 
 /*
  processes all pin related configuration instructions, exspects a PIN_CONF package.

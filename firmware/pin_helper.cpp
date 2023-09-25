@@ -19,19 +19,19 @@
 
 #include "pin_helper.h"
 
-volatile bool input_pin_active[55] = {};
-volatile bool output_pin_active[55] = {};
 
-bool reserve_input_pin(uint8_t id) {
+volatile bool input_pin_active[NUMBER_OF_DIGITAL_PINS] = {};
+volatile bool output_pin_active[NUMBER_OF_DIGITAL_PINS] = {};
+
+bool reserve_input_pin(uint8_t id, uint8_t from_instruction) {
+  if (id >= NUMBER_OF_DIGITAL_PINS){
+    error_message(OUT_ERROR_CONFIGURATION_OUT_OF_BOUNDS,from_instruction,id);
+    return false;
+  }
   noInterrupts();
   if (input_pin_active[id] || output_pin_active[id]) {
-    if (is_output_buffer_not_full()){
-      output_ring_buffer[output_ring_buffer_next_free].error.header = OUT_ERROR_PIN_ALREADY_INUSE;
-      output_ring_buffer[output_ring_buffer_next_free].error.org_header = OUT_ERROR_PIN_ALREADY_INUSE;
-      output_ring_buffer[output_ring_buffer_next_free].error.value = id;
-      output_ring_buffer_next_free = (output_ring_buffer_next_free + 1) % OUTPUT_BUFFER_SIZE;          
-    }
     interrupts();
+    error_message(OUT_ERROR_PIN_ALREADY_INUSE,from_instruction,id);
     return false;
   }
   else{
@@ -41,16 +41,15 @@ bool reserve_input_pin(uint8_t id) {
   return true;
 }
 
-bool reserve_output_pin(uint8_t id) {
+bool reserve_output_pin(uint8_t id, uint8_t from_instruction) {
+  if (id >= NUMBER_OF_DIGITAL_PINS){
+    error_message(OUT_ERROR_CONFIGURATION_OUT_OF_BOUNDS,from_instruction,id);
+    return false;
+  }
   noInterrupts();
   if (input_pin_active[id] || output_pin_active[id]) {
-    if (is_output_buffer_not_full()){
-      output_ring_buffer[output_ring_buffer_next_free].error.header = OUT_ERROR_PIN_ALREADY_INUSE;
-      output_ring_buffer[output_ring_buffer_next_free].error.org_header = OUT_ERROR_PIN_ALREADY_INUSE;
-      output_ring_buffer[output_ring_buffer_next_free].error.value = id;
-      output_ring_buffer_next_free = (output_ring_buffer_next_free + 1) % OUTPUT_BUFFER_SIZE;          
-    }
     interrupts();
+    error_message(OUT_ERROR_PIN_ALREADY_INUSE,from_instruction,id);
     return false;
   }
   else{
@@ -65,20 +64,7 @@ void configure_pin(uint8_t instruction, uint8_t data){
   switch (instruction){
     case CONF_OUTPUT:
       if (reserve_output_pin(data)){
-        
         pinMode(data, OUTPUT);
-
-        // write to output buffer a success packet.
-
-        noInterrupts();
-        if (is_output_buffer_not_full()) {
-          output_ring_buffer[output_ring_buffer_next_free].pin.header = OUT_SUCCESS_PIN_CONFIGURED;
-          output_ring_buffer[output_ring_buffer_next_free].pin.exec_time = micros()-offset_time;
-          output_ring_buffer[output_ring_buffer_next_free].pin.id = data;
-          output_ring_buffer[output_ring_buffer_next_free].pin.value = OUTPUT;
-          output_ring_buffer_next_free = (output_ring_buffer_next_free + 1) % OUTPUT_BUFFER_SIZE;
-        }
-        interrupts();
       }
       break;
     case CONF_INPUT:
@@ -141,27 +127,13 @@ void configure_pin(uint8_t instruction, uint8_t data){
           case 53: attachInterrupt(digitalPinToInterrupt(data), pin_ISR53, CHANGE); break;
           case 54: attachInterrupt(digitalPinToInterrupt(data), pin_ISR54, CHANGE); break;
           default:
-            noInterrupts();
-            if (is_output_buffer_not_full()){
-              output_ring_buffer[output_ring_buffer_next_free].error.header = OUT_ERROR_UNKNOWN_CONFIGURATION;
-              output_ring_buffer[output_ring_buffer_next_free].error.org_header = instruction;
-              output_ring_buffer[output_ring_buffer_next_free].error.value = data;
-              output_ring_buffer_next_free = (output_ring_buffer_next_free + 1) % OUTPUT_BUFFER_SIZE;         
-            }
-            interrupts(); 
+            error_message(OUT_ERROR_UNKNOWN_CONFIGURATION,instruction,data);
             break;
         }
       }
       break;
     default:
-      noInterrupts();
-      if (is_output_buffer_not_full()){
-        output_ring_buffer[output_ring_buffer_next_free].error.header = OUT_ERROR_UNKNOWN_CONFIGURATION;
-        output_ring_buffer[output_ring_buffer_next_free].error.org_header = instruction;
-        output_ring_buffer[output_ring_buffer_next_free].error.value = data;
-        output_ring_buffer_next_free = (output_ring_buffer_next_free + 1) % OUTPUT_BUFFER_SIZE;          
-      }
-      interrupts();
+      error_message(OUT_ERROR_UNKNOWN_CONFIGURATION,instruction,data);
       break;
     }
 

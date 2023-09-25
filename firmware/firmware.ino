@@ -17,6 +17,12 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+// -DARDUINO_SAMD_MKRZERO -DARDUINO_ARCH_SAMD -DUSE_ARDUINO_MKR_PIN_LAYOUT -D__SAMD21G18A__ -DF_CPU=48000000L
+// -D__IMXRT1062__ -DARDUINO_TEENSY41 -DF_CPU=600000000
+4f -DUSBCON "-DUSB_MANUFACTURER=\"Arduino LLC\"" "-DUSB_PRODUCT=\"Arduino MKRZero\"" -I/home/p302212/.arduino15/packages/arduino/tools/CMSIS/4.5.0/CMSIS/Include/ -I/home/p302212/.arduino15/packages/arduino/tools/CMSIS-Atmel/1.2.0/CMSIS/Device/ATMEL/ -I/home/p302212/.arduino15/packages/arduino/hardware/samd/1.8.13/cores/arduino/api/deprecated -I/home/p302212/.arduino15/packages/arduino/hardware/samd/1.8.13/cores/arduino/api/deprecated-avr-comp -I/home/p302212/.arduino15/packages/arduino/hardware/samd/1.8.13/cores/arduino -I/home/p302212/.arduino15/packages/arduino/hardware/samd/1.8.13/variants/mkrzero -I/home/p302212/Arduino/libraries/Adafruit_MCP23017_Arduino_Library/src -I/home/p302212/Arduino/libraries/Adafruit_BusIO -I/home/p302212/.arduino15/packages/arduino/hardware/samd/1.8.13/libraries/Wire -I/home/p302212/.arduino15/packages/arduino/hardware/samd/1.8.13/libraries/SPI /tmp/arduino/sketches/A2C572F20539BEE7818185C5EA24C6E9/sketch/instruction_exec.cpp -o /tmp/arduino/sketches/A2C572F20539BEE7818185C5EA24C6E9/sketch/instruction_exec.cpp.o
+
+
+
 #include <Arduino.h>
 #include "ring_buffer.h"
 #include "instruction_exec.h"
@@ -58,13 +64,8 @@ and the command is executed at that time via interrupt. (see instruction_exec.h/
 void setup() { 
   Serial.begin(115200);   // the speed is ignored the USB native speed is used. 
   Serial.setTimeout(1);    
-
   setup_ring_buffer();
-
-  myTimer.priority(200); 
-
-  pinMode(3, OUTPUT);
-  digitalWrite(3, LOW);
+  myTimer.priority(200);
 
 }
 
@@ -92,22 +93,17 @@ void loop() {
       interrupts();
     }
 
-    // if instruction buffer is full send error
+    // if instruction buffer is full send error, error_message not used because send without que
     else {
-      packet_t error_packet;
-      error_packet.error.header = OUT_ERROR_INPUT_FULL;
-      error_packet.error.org_header = current_instruction.data.header;
-      error_packet.error.value = current_instruction.data.value;
-      Serial.write(error_packet.bytes, sizeof(packet_t));
+      error_message_bypass_buffer(OUT_ERROR_INPUT_FULL,current_instruction.data.header,current_instruction.data.value);
     }
 
-    // send error if output buffer is full
-    if (output_ring_buffer_start == output_ring_buffer_next_free) {
-      packet_t error_packet;
-      error_packet.error.header = OUT_ERROR_OUTPUT_FULL;
-      error_packet.error.org_header = OUT_ERROR_OUTPUT_FULL;
-      error_packet.error.value = output_ring_buffer_next_free;
-      Serial.write(error_packet.bytes, sizeof(packet_t));
-    } 
-  }      
+
+  }
+  // send error if output buffer is full,
+  if (output_ring_buffer_start == output_ring_buffer_next_free) {
+    error_message_bypass_buffer(OUT_ERROR_OUTPUT_FULL,OUT_ERROR_OUTPUT_FULL,output_ring_buffer_next_free);
+  } 
+  // write output buffer
+
 }

@@ -34,6 +34,7 @@ void aer_ISR(uint8_t id) {
 
 void delay20ns( uint32_t clocks )
 {
+  #if (F_CPU>=500000000)
   do
   {
     __asm( "nop" );
@@ -44,6 +45,21 @@ void delay20ns( uint32_t clocks )
     __asm( "nop" );
   }
   while ( --clocks );
+  #elif (F_CPU>=100000000)
+  do
+  {
+    __asm( "nop" );
+    __asm( "nop" );
+    __asm( "nop" );
+  }
+  while ( --clocks );
+  #else
+  do
+  {
+    __asm( "nop" );
+  }
+  while ( --clocks );
+  #endif
 }
 
 void aer0_ISR() { aer_ISR(0); }
@@ -57,15 +73,11 @@ void aer7_ISR() { aer_ISR(7); }
 
 //@TODO move to pin_helper
 void pin_ISR(uint8_t id) {
-  noInterrupts();
-  if (is_output_buffer_not_full() && offset_time != 0) {
-    output_ring_buffer[output_ring_buffer_next_free].pin.header = OUT_PIN;
-    output_ring_buffer[output_ring_buffer_next_free].pin.exec_time = micros()-offset_time;
-    output_ring_buffer[output_ring_buffer_next_free].pin.id = id;
-    output_ring_buffer[output_ring_buffer_next_free].pin.value = digitalReadFast(id); //@TODO replace with direct pin access
-    output_ring_buffer_next_free = (output_ring_buffer_next_free + 1) % OUTPUT_BUFFER_SIZE;  
-  }
-  interrupts();
+  #if defined(ARDUINO_TEENSY41)
+  send_pin(OUT_PIN,id,digitalReadFast(id)); //@TODO replace with direct pin access
+  #else
+  send_pin(OUT_PIN,id,digitalRead(id));
+  #endif
 }
 
 void pin_ISR0() { pin_ISR(0); }

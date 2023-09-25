@@ -48,12 +48,12 @@ class AER_to_chip
     //-----------------------------------------------------------------------------------------------------------------------------------
     // Class constructor; initialises the AER_to_chip object and sets up the relevant pins on Teensy
     //-----------------------------------------------------------------------------------------------------------------------------------
-    AER_to_chip(uint8_t id, uint8_t reqPin, uint8_t ackPin, uint8_t dataPins[], uint8_t numDataPins, uint8_t delay = 0, bool activeLow = false);
+    AER_to_chip(uint8_t id, uint8_t reqPin, uint8_t ackPin, volatile uint8_t dataPins[], uint8_t numDataPins, uint8_t delay = 0, bool activeLow = false);
 
     //----------------------------------------------------------------------------------------------------------------------------------
     // dataWrite: Executes REQ/ACK handshake and writes  to ALIVE
     //----------------------------------------------------------------------------------------------------------------------------------
-    bool dataWrite(uint32_t data);
+    bool dataWrite(uint32_t data) volatile;
 
 
     // ---------------------------------------------------- Declaring private methods --------------------------------------------------
@@ -85,7 +85,7 @@ class AER_to_chip
 
     uint8_t _reqPin;
     uint8_t _ackPin;
-    uint8_t* _dataPins;
+    volatile uint8_t* _dataPins;
     uint8_t _numDataPins;
     uint8_t _delay;
     bool _activeLow;

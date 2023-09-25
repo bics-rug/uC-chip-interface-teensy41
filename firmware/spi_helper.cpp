@@ -19,164 +19,110 @@
 
 #include "spi_helper.h"
 
-volatile bool spi0_active = 0;
-volatile bool spi1_active = 0;
-volatile bool spi2_active = 0;
+#define NUMBER_OF_SPI_INTERFACES_MAX 3
+
+volatile bool spi_active[NUMBER_OF_SPI_INTERFACES_MAX] = {};
 
 void configure_spi(int id, uint8_t config_option, uint8_t data){
     switch (config_option){
       case CONF_ACTIVE:
-            if ((spi0_active == 1 && id == 0) ||
-                (spi1_active == 1 && id == 1) ||
-                (spi2_active == 1 && id == 2)) {
-              packet_t error_packet;
-              error_packet.error.header = OUT_ERROR_INTERFACE_ALREADY_ACTIVE;
-              switch (id){
-                case 0: error_packet.error.org_header = IN_CONF_SPI0; break;
-                case 1: error_packet.error.org_header = IN_CONF_SPI1; break;
-                case 2: error_packet.error.org_header = IN_CONF_SPI2; break;
-              }
-              error_packet.error.value = micros() - offset_time;
-              if (is_output_buffer_not_full()){
-                output_ring_buffer[output_ring_buffer_next_free] = error_packet;
-                output_ring_buffer_next_free = (output_ring_buffer_next_free + 1) % OUTPUT_BUFFER_SIZE;          
-              }
+        switch (id){
+          case 0: 
+            if (spi_active[0] == 1) error_message(OUT_ERROR_INTERFACE_ALREADY_ACTIVE,IN_CONF_SPI0);
+            else if (reserve_input_pin(12) && reserve_output_pin(11) && reserve_output_pin(13)){
+              SPI.begin();
+              spi_active[0] = 1;                    
             }
-            else{
-              switch (id){
-                case 0: 
-                  if (reserve_input_pin(12) && reserve_output_pin(11) && reserve_output_pin(13)){
-                    SPI.begin();
-                    spi0_active = 1;                    
-                  }
-                  break;               
-                case 1: 
-                  if (reserve_input_pin(1) && reserve_output_pin(26) && reserve_output_pin(27)){
-                    SPI1.begin();
-                    spi1_active = 1;                    
-                  }
-                  break;  
-                case 2: 
-                  if (reserve_input_pin(42) && reserve_output_pin(43) && reserve_output_pin(45)){
-                    SPI2.begin();
-                    spi2_active = 1;                    
-                  }
-                  break;  
-              }
+            break;               
+          case 1: 
+            if (spi_active[1] == 1) error_message(OUT_ERROR_INTERFACE_ALREADY_ACTIVE,IN_CONF_SPI1);
+            else if (reserve_input_pin(1) && reserve_output_pin(26) && reserve_output_pin(27)){
+              SPI1.begin();
+              spi_active[1] = 1;                    
             }
-
-        
+            break;
+          #if defined(ARDUINO_TEENSY41) || defined(ARDUINO_TEENSY40)  
+          case 2: 
+            if (spi_active[2] == 1) error_message(OUT_ERROR_INTERFACE_ALREADY_ACTIVE,IN_CONF_SPI2);
+            else if (reserve_input_pin(42) && reserve_output_pin(43) && reserve_output_pin(45)){
+              SPI2.begin();
+              spi_active[2] = 1;                    
+            }
+            break;
+          #endif
+          default:
+            error_message(OUT_ERROR_CONFIGURATION_OUT_OF_BOUNDS,config_option,id);
+            break;
+        }
         break;
       default:
-      if (is_output_buffer_not_full()){
-        output_ring_buffer[output_ring_buffer_next_free].error.header = OUT_ERROR_UNKNOWN_CONFIGURATION;
-        output_ring_buffer[output_ring_buffer_next_free].error.org_header = config_option;
-        output_ring_buffer[output_ring_buffer_next_free].error.value = data;
-        output_ring_buffer_next_free = (output_ring_buffer_next_free + 1) % OUTPUT_BUFFER_SIZE;          
-      }
-      break;
+        error_message(OUT_ERROR_UNKNOWN_CONFIGURATION,config_option,data);
+        break;
     }
 }     
-        
-        
+         
 void send_spi_packet(int id, uint8_t data){
-  if ((spi0_active == 0 && id == 0) ||
-      (spi1_active == 0 && id == 1) ||
-      (spi2_active == 0 && id == 2)) {
-    
-    packet_t error_packet;
-    error_packet.error.header = OUT_ERROR_INTERFACE_NOT_ACTIVE;
-    switch (id){
-      case 0: error_packet.error.org_header = IN_SPI0; break;
-      case 1: error_packet.error.org_header = IN_SPI1; break;
-      case 2: error_packet.error.org_header = IN_SPI2; break;
-    }
-    error_packet.error.value = micros() - offset_time;
-    if (is_output_buffer_not_full()){
-      output_ring_buffer[output_ring_buffer_next_free] = error_packet;
-      output_ring_buffer_next_free = (output_ring_buffer_next_free + 1) % OUTPUT_BUFFER_SIZE;          
-    }
-    return;
-  }
-  
-  packet_t out;
   switch (id){
     case 0:
+      if (spi_active[0] != 1) { error_message(OUT_ERROR_INTERFACE_NOT_ACTIVE,IN_SPI0); break;}
       SPI.beginTransaction(SPISettings(4000000, LSBFIRST, SPI_MODE0));
-      SPI.transfer(data);
+      send_data8(OUT_SPI0,SPI.transfer(data));
       SPI.endTransaction();
-      out.data_8.header = OUT_SPI0;
-      out.data_8.value = data;
       break;
     case 1:
+      if (spi_active[1] != 1) { error_message(OUT_ERROR_INTERFACE_NOT_ACTIVE,IN_SPI1); break;}
       SPI1.beginTransaction(SPISettings(4000000, LSBFIRST, SPI_MODE0));
-      SPI1.transfer(data);
+      send_data8(OUT_SPI1,SPI1.transfer(data));
       SPI1.endTransaction(); 
-      out.data_8.header = OUT_SPI1;
-      out.data_8.value = data;    
       break;
+    #if defined(ARDUINO_TEENSY41) || defined(ARDUINO_TEENSY40)
     case 2:
+      if (spi_active[2] != 1) { error_message(OUT_ERROR_INTERFACE_NOT_ACTIVE,IN_SPI2); break;}
       SPI2.beginTransaction(SPISettings(4000000, LSBFIRST, SPI_MODE0));
-      SPI2.transfer(data);
-      SPI2.endTransaction(); 
-      out.data_8.header = OUT_SPI2;
-      out.data_8.value = data;  
+      send_data8(OUT_SPI2,SPI2.transfer(data));
+      SPI2.endTransaction();  
       break;
-  }
-  out.data_8.exec_time = micros()-offset_time;
-  if (is_output_buffer_not_full() && offset_time != 0){
-    output_ring_buffer[output_ring_buffer_next_free] = out;
-    output_ring_buffer_next_free = (output_ring_buffer_next_free + 1) % OUTPUT_BUFFER_SIZE;          
+    #endif
+    default:
+      error_message(OUT_ERROR_CONFIGURATION_OUT_OF_BOUNDS,IN_SPI0,id);
+      break;
   }
 }
 
 void send_spi_packet_32bit(int id, uint32_t data){
-  if ((spi0_active == 0 && id == 0) ||
-      (spi1_active == 0 && id == 1) ||
-      (spi2_active == 0 && id == 2)) {
-    
-    packet_t error_packet;
-    error_packet.error.header = OUT_ERROR_INTERFACE_NOT_ACTIVE;
-    switch (id){
-      case 0: error_packet.error.org_header = IN_SPI0_32; break;
-      case 1: error_packet.error.org_header = IN_SPI1_32; break;
-      case 2: error_packet.error.org_header = IN_SPI2_32; break;
-    }
-    error_packet.error.value = micros() - offset_time;
-    if (is_output_buffer_not_full()){
-      output_ring_buffer[output_ring_buffer_next_free] = error_packet;
-      output_ring_buffer_next_free = (output_ring_buffer_next_free + 1) % OUTPUT_BUFFER_SIZE;          
-    }
-    return;
-  }
-  
-  packet_t out;
   switch (id){
     case 0:
+      if (spi_active[0] != 1) { error_message(OUT_ERROR_INTERFACE_NOT_ACTIVE,IN_SPI0_32); break;}
       SPI.beginTransaction(SPISettings(4000000, LSBFIRST, SPI_MODE0));
-      SPI.transfer32(data);
+      #if defined(ARDUINO_TEENSY41) || defined(ARDUINO_TEENSY40)
+      send_data32(OUT_SPI0_32, SPI.transfer32(data));
+      #else
+      error_message(OUT_ERROR,IN_SPI0_32,data);
+      // @TODO implement with transfer16 on first demand
+      #endif
       SPI.endTransaction();
-      out.data.header = OUT_SPI0_32;
-      out.data.value = data;
       break;
     case 1:
+      if (spi_active[1] != 1) { error_message(OUT_ERROR_INTERFACE_NOT_ACTIVE,IN_SPI1_32); break;}
       SPI1.beginTransaction(SPISettings(4000000, LSBFIRST, SPI_MODE0));
-      SPI1.transfer32(data);
-      SPI1.endTransaction(); 
-      out.data.header = OUT_SPI1_32;
-      out.data.value = data;    
+      #if defined(ARDUINO_TEENSY41) || defined(ARDUINO_TEENSY40)
+      send_data32(OUT_SPI1_32, SPI1.transfer32(data));
+      #else
+      error_message(OUT_ERROR,IN_SPI1_32,data);
+      // @TODO implement with transfer16 on first demand
+      #endif
+      SPI1.endTransaction();  
       break;
+    #if defined(ARDUINO_TEENSY41) || defined(ARDUINO_TEENSY40)
     case 2:
+      if (spi_active[2] != 1) { error_message(OUT_ERROR_INTERFACE_NOT_ACTIVE,IN_SPI2_32); break;}
       SPI2.beginTransaction(SPISettings(4000000, LSBFIRST, SPI_MODE0));
-      SPI2.transfer32(data);
+      send_data32(OUT_SPI2_32, SPI2.transfer32(data));
       SPI2.endTransaction(); 
-      out.data.header = OUT_SPI2_32;
-      out.data.value = data;  
       break;
-  }
-  out.data_8.exec_time = micros()-offset_time;
-  if (is_output_buffer_not_full() && offset_time != 0){
-    output_ring_buffer[output_ring_buffer_next_free] = out;
-    output_ring_buffer_next_free = (output_ring_buffer_next_free + 1) % OUTPUT_BUFFER_SIZE;          
+    #endif
+    default:
+      error_message(OUT_ERROR_CONFIGURATION_OUT_OF_BOUNDS,IN_SPI0_32,id);
+      break;
   }
 }

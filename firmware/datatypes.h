@@ -479,11 +479,18 @@ enum outPacketHeader : uint8_t {
    uses 
   */
   OUT_ERROR_PERIPHERAL_INTERFACE_NOT_READY = 210U,
+  /*
+   the configuration id you send is out of bounds of the available uC resources
+   uses error_package
+    - id is the wrong id
+  */
+  OUT_ERROR_CONFIGURATION_OUT_OF_BOUNDS = 211U,
  /*
    this packet is used to destinguish between an empty and a full buffer
    uses data
     - value is 1 so ignore
   */
+ 
   OUT_BUFFER_LAST_READ = 250U,
 
   /*

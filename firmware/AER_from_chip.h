@@ -81,24 +81,24 @@ class AER_from_chip {
     //-----------------------------------------------------------------------------------------------------------------------------------
     // Class constructor; initialises the AER_from_chip object and sets up the relevant pins on Teensy
     //-----------------------------------------------------------------------------------------------------------------------------------
-    AER_from_chip(uint8_t id, uint8_t reqPin, uint8_t ackPin, uint8_t dataPins[], uint8_t numDataPins, uint8_t delay = 0, 
+    AER_from_chip(uint8_t id, uint8_t reqPin, uint8_t ackPin, volatile uint8_t dataPins[], uint8_t numDataPins, uint8_t delay = 0, 
                 bool activeLow = false, bool dataActiveLow = false);
 
 
     //----------------------------------------------------------------------------------------------------------------------------------
     // reqRead: Reads REQ pin state
     //----------------------------------------------------------------------------------------------------------------------------------    
-    bool reqRead();
+    bool reqRead() volatile;
 
     //----------------------------------------------------------------------------------------------------------------------------------
     // ackWrite: Writes to ACK pin
     //----------------------------------------------------------------------------------------------------------------------------------
-    void ackWrite(bool val);
+    void ackWrite(bool val) volatile;
 
     //----------------------------------------------------------------------------------------------------------------------------------
     // recordEvent: Records output events as they occur
     //----------------------------------------------------------------------------------------------------------------------------------
-    void recordEvent();
+    void recordEvent() volatile;
 
     //----------------------------------------------------------------------------------------------------------------------------------
     // handshake: Executes REQ/ACK handshake between Teensy and chip
@@ -118,7 +118,7 @@ class AER_from_chip {
 
     uint8_t _reqPin;
     uint8_t _ackPin;
-    uint8_t* _dataPins;
+    volatile uint8_t* _dataPins;
     uint8_t _numDataPins;
     uint8_t _delay;
     bool _handshakeActiveLow;

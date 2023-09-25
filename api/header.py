@@ -489,6 +489,18 @@ class ErrorHeader(enum.IntEnum) :
      uses 
     """
     OUT_ERROR_AER_HS_TIMEOUT = 209
+    """
+    this error is thrown when a peripheral interface is not ready
+    For example: the I2C for the MCP23017 is not ready
+    uses 
+    """
+    OUT_ERROR_PERIPHERAL_INTERFACE_NOT_READY = 210
+    """
+    the configuration id you send is out of bounds of the available uC resources
+    uses error_package
+    - id is the wrong id
+    """
+    OUT_ERROR_CONFIGURATION_OUT_OF_BOUNDS = 211
 
 
 

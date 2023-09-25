@@ -30,12 +30,7 @@ volatile AER_to_chip* AER_to_chip::inst[8] = {};
 
 void AER_to_chip::configure(uint8_t id, uint8_t config, uint8_t data){
   if (id >= 8) {
-    if (is_output_buffer_not_full()){
-      output_ring_buffer[output_ring_buffer_next_free].error.header = OUT_ERROR_UNKNOWN_CONFIGURATION;
-      output_ring_buffer[output_ring_buffer_next_free].error.org_header = CONF_ACTIVE;
-      output_ring_buffer[output_ring_buffer_next_free].error.value = id;
-      output_ring_buffer_next_free = (output_ring_buffer_next_free + 1) % OUTPUT_BUFFER_SIZE;          
-    }
+    error_message(OUT_ERROR_CONFIGURATION_OUT_OF_BOUNDS,CONF_ACTIVE,id);
     return;
   }  
 
@@ -58,12 +53,7 @@ void AER_to_chip::configure(uint8_t id, uint8_t config, uint8_t data){
       break;
     case CONF_WIDTH:
       if (data > 32) {
-        if (is_output_buffer_not_full()){
-          output_ring_buffer[output_ring_buffer_next_free].error.header = OUT_ERROR_UNKNOWN_CONFIGURATION;
-          output_ring_buffer[output_ring_buffer_next_free].error.org_header = config;
-          output_ring_buffer[output_ring_buffer_next_free].error.value = id;
-          output_ring_buffer_next_free = (output_ring_buffer_next_free + 1) % OUTPUT_BUFFER_SIZE;          
-        }
+        error_message(OUT_ERROR_CONFIGURATION_OUT_OF_BOUNDS,config,id);
         AER_to_chip::data_width[id] = 32;
       }
       else AER_to_chip::data_width[id] = data;
@@ -81,12 +71,7 @@ void AER_to_chip::configure(uint8_t id, uint8_t config, uint8_t data){
       if (config < 32){
         AER_to_chip::data_pins[id][config] = data;
       }
-      else if (is_output_buffer_not_full()){
-        output_ring_buffer[output_ring_buffer_next_free].error.header = OUT_ERROR_UNKNOWN_CONFIGURATION;
-        output_ring_buffer[output_ring_buffer_next_free].error.org_header = config;
-        output_ring_buffer[output_ring_buffer_next_free].error.value = id;
-        output_ring_buffer_next_free = (output_ring_buffer_next_free + 1) % OUTPUT_BUFFER_SIZE;          
-      }
+      else error_message(OUT_ERROR_UNKNOWN_CONFIGURATION,config,id);
   }
 }
 
@@ -94,21 +79,20 @@ void AER_to_chip::send_aer_packet(uint8_t id, uint32_t data){
   if (AER_to_chip::active[id]){
     AER_to_chip::inst[id]->dataWrite(data);
   }
-  else if (is_output_buffer_not_full()){
+  else {
+    uint8_t interface;
     switch(id){
-      case 0: output_ring_buffer[output_ring_buffer_next_free].error.org_header = IN_AER_TO_CHIP0; break;
-      case 1: output_ring_buffer[output_ring_buffer_next_free].error.org_header = IN_AER_TO_CHIP1; break;
-      case 2: output_ring_buffer[output_ring_buffer_next_free].error.org_header = IN_AER_TO_CHIP2; break;
-      case 3: output_ring_buffer[output_ring_buffer_next_free].error.org_header = IN_AER_TO_CHIP3; break;
-      case 4: output_ring_buffer[output_ring_buffer_next_free].error.org_header = IN_AER_TO_CHIP4; break;
-      case 5: output_ring_buffer[output_ring_buffer_next_free].error.org_header = IN_AER_TO_CHIP5; break;
-      case 6: output_ring_buffer[output_ring_buffer_next_free].error.org_header = IN_AER_TO_CHIP6; break;
-      case 7: output_ring_buffer[output_ring_buffer_next_free].error.org_header = IN_AER_TO_CHIP7; break;
-      default: output_ring_buffer[output_ring_buffer_next_free].error.org_header = OUT_ERROR; break;
+      case 0: interface = IN_AER_TO_CHIP0; break;
+      case 1: interface = IN_AER_TO_CHIP1; break;
+      case 2: interface = IN_AER_TO_CHIP2; break;
+      case 3: interface = IN_AER_TO_CHIP3; break;
+      case 4: interface = IN_AER_TO_CHIP4; break;
+      case 5: interface = IN_AER_TO_CHIP5; break;
+      case 6: interface = IN_AER_TO_CHIP6; break;
+      case 7: interface = IN_AER_TO_CHIP7; break;
+      default:interface = OUT_ERROR; break;
     }
-    output_ring_buffer[output_ring_buffer_next_free].error.header = OUT_ERROR_INTERFACE_NOT_ACTIVE;
-    output_ring_buffer[output_ring_buffer_next_free].error.value = data;
-    output_ring_buffer_next_free = (output_ring_buffer_next_free + 1) % OUTPUT_BUFFER_SIZE;          
+    error_message(OUT_ERROR_INTERFACE_NOT_ACTIVE,interface,data);          
   }
 }
 
@@ -118,7 +102,7 @@ void AER_to_chip::send_aer_packet(uint8_t id, uint32_t data){
 // Class constructor; initialises the AER_to_chip object and sets up the relevant pins on Teensy
 //---------------------------------------------------------------------------------------------------------------------------------------
 
-AER_to_chip::AER_to_chip(uint8_t id, uint8_t reqPin, uint8_t ackPin, uint8_t dataPins[], uint8_t numDataPins, uint8_t delay, bool activeLow)
+AER_to_chip::AER_to_chip(uint8_t id, uint8_t reqPin, uint8_t ackPin, volatile uint8_t dataPins[], uint8_t numDataPins, uint8_t delay, bool activeLow)
 {
   _reqPin = reqPin;
   _ackPin = ackPin;
@@ -135,7 +119,7 @@ AER_to_chip::AER_to_chip(uint8_t id, uint8_t reqPin, uint8_t ackPin, uint8_t dat
 // dataWrite: Executes REQ/ACK handshake and writes  to chip
 //---------------------------------------------------------------------------------------------------------------------------------------
 
-bool AER_to_chip::dataWrite(uint32_t data) 
+bool AER_to_chip::dataWrite(uint32_t data) volatile 
 {
   unsigned long t0 = millis();
   bool handshakeStatus = true;
@@ -146,12 +130,19 @@ bool AER_to_chip::dataWrite(uint32_t data)
   while(!ackRead()) {
     if (millis() > t0 + AER_HANDSHAKE_TIMEOUT) {
       handshakeStatus = false;
-      if (is_output_buffer_not_full()){
-        output_ring_buffer[output_ring_buffer_next_free].error.header = OUT_ERROR_AER_HS_TIMEOUT;
-        output_ring_buffer[output_ring_buffer_next_free].error.org_header = OUT_ERROR_AER_HS_TIMEOUT;
-        output_ring_buffer[output_ring_buffer_next_free].error.value = _id;
-        output_ring_buffer_next_free = (output_ring_buffer_next_free + 1) % OUTPUT_BUFFER_SIZE;          
+      uint8_t interface;
+      switch(_id){
+        case 0: interface = IN_AER_TO_CHIP0; break;
+        case 1: interface = IN_AER_TO_CHIP1; break;
+        case 2: interface = IN_AER_TO_CHIP2; break;
+        case 3: interface = IN_AER_TO_CHIP3; break;
+        case 4: interface = IN_AER_TO_CHIP4; break;
+        case 5: interface = IN_AER_TO_CHIP5; break;
+        case 6: interface = IN_AER_TO_CHIP6; break;
+        case 7: interface = IN_AER_TO_CHIP7; break;
+        default:interface = OUT_ERROR; break;
       }
+      error_message(OUT_ERROR_AER_HS_TIMEOUT,interface);    
       break;
     }
   }
@@ -185,7 +176,11 @@ bool AER_to_chip::setupPins() {
 
 bool AER_to_chip::ackRead() 
 {
+  #if defined(ARDUINO_TEENSY41) || defined(ARDUINO_TEENSY40)
   return digitalReadFast(_ackPin)^_activeLow;
+  #else
+  return digitalRead(_ackPin)^_activeLow;
+  #endif
 }
 
 
@@ -199,7 +194,12 @@ void AER_to_chip::reqWrite(bool val)
   {
     delay20ns(_delay);
   }
-  digitalWriteFast(_reqPin, val^_activeLow);
+  #if defined(ARDUINO_TEENSY41) || defined(ARDUINO_TEENSY40)
+  digitalWriteFast(_reqPin, val^_activeLow); 
+  #else
+  digitalWrite(_reqPin, val^_activeLow);
+  #endif
+  
 }
 
 
@@ -210,6 +210,11 @@ void AER_to_chip::reqWrite(bool val)
 void AER_to_chip::setData(uint32_t data) {
   for (int i=0; i<_numDataPins; i++) {
     bool bit = bitRead(data, i)^_activeLow;
+    #if defined(ARDUINO_TEENSY41) || defined(ARDUINO_TEENSY40)
     digitalWriteFast(_dataPins[i], bit);
+    #else
+    digitalWrite(_dataPins[i], bit);
+    #endif
+    
   }
 }

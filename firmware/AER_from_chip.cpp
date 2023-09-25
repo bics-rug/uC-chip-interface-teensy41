@@ -38,12 +38,7 @@ volatile AER_from_chip* AER_from_chip::inst[8] = {};
 void AER_from_chip::configure(uint8_t id, uint8_t config, uint8_t data){
   // check if the ID is valid otherwise throw error
   if (id >= 8) {
-    if (is_output_buffer_not_full()){
-      output_ring_buffer[output_ring_buffer_next_free].error.header = OUT_ERROR_UNKNOWN_CONFIGURATION;
-      output_ring_buffer[output_ring_buffer_next_free].error.org_header = CONF_ACTIVE;
-      output_ring_buffer[output_ring_buffer_next_free].error.value = id;
-      output_ring_buffer_next_free = (output_ring_buffer_next_free + 1) % OUTPUT_BUFFER_SIZE;          
-    }
+    error_message(OUT_ERROR_CONFIGURATION_OUT_OF_BOUNDS,CONF_ACTIVE,id);
     return;
   }
   // handle the different config sub headers
@@ -91,12 +86,7 @@ void AER_from_chip::configure(uint8_t id, uint8_t config, uint8_t data){
     case CONF_WIDTH:
       // throw error if interface is to wide
       if (data > 32) {
-        if (is_output_buffer_not_full()){
-          output_ring_buffer[output_ring_buffer_next_free].error.header = OUT_ERROR_UNKNOWN_CONFIGURATION;
-          output_ring_buffer[output_ring_buffer_next_free].error.org_header = config;
-          output_ring_buffer[output_ring_buffer_next_free].error.value = id;
-          output_ring_buffer_next_free = (output_ring_buffer_next_free + 1) % OUTPUT_BUFFER_SIZE;          
-        }
+        error_message(OUT_ERROR_CONFIGURATION_OUT_OF_BOUNDS,config,id);
         AER_from_chip::data_width[id] = 32;
       }
       else AER_from_chip::data_width[id] = data;
@@ -119,12 +109,9 @@ void AER_from_chip::configure(uint8_t id, uint8_t config, uint8_t data){
         AER_from_chip::data_pins[id][config] = data;
       }
       // throw and error if the config header is not implemented
-      else if (is_output_buffer_not_full()){
-        output_ring_buffer[output_ring_buffer_next_free].error.header = OUT_ERROR_UNKNOWN_CONFIGURATION;
-        output_ring_buffer[output_ring_buffer_next_free].error.org_header = config;
-        output_ring_buffer[output_ring_buffer_next_free].error.value = id;
-        output_ring_buffer_next_free = (output_ring_buffer_next_free + 1) % OUTPUT_BUFFER_SIZE;          
-      }
+      
+      else error_message(OUT_ERROR_UNKNOWN_CONFIGURATION,config,id);
+      
   }
 }
 
@@ -133,7 +120,7 @@ void AER_from_chip::configure(uint8_t id, uint8_t config, uint8_t data){
 // AER_from_chip constructor
 //---------------------------------------------------------------------------------------------------------------------------------------
 
-AER_from_chip::AER_from_chip(uint8_t id, uint8_t reqPin, uint8_t ackPin, uint8_t dataPins[], uint8_t numDataPins, uint8_t delay, bool handshakeActiveLow, bool dataActiveLow) {
+AER_from_chip::AER_from_chip(uint8_t id, uint8_t reqPin, uint8_t ackPin, volatile uint8_t dataPins[], uint8_t numDataPins, uint8_t delay, bool handshakeActiveLow, bool dataActiveLow) {
   _reqPin = reqPin;
   _ackPin = ackPin;
   _dataPins = dataPins;
@@ -178,58 +165,54 @@ AER_from_chip::AER_from_chip(uint8_t id, uint8_t reqPin, uint8_t ackPin, uint8_t
         AER_from_chip::active[id] = true;
         break;
       default:
-        if (is_output_buffer_not_full()){
-          output_ring_buffer[output_ring_buffer_next_free].error.header = OUT_ERROR_UNKNOWN_CONFIGURATION;
-          output_ring_buffer[output_ring_buffer_next_free].error.org_header = CONF_ACTIVE;
-          output_ring_buffer[output_ring_buffer_next_free].error.value = id;
-          output_ring_buffer_next_free = (output_ring_buffer_next_free + 1) % OUTPUT_BUFFER_SIZE;          
-        }
+        error_message(OUT_ERROR_UNKNOWN_CONFIGURATION,CONF_ACTIVE,id);
     }
   } 
 }
-
-
 
 //---------------------------------------------------------------------------------------------------------------------------------------
 // reqRead: Reads REQ pin state
 //---------------------------------------------------------------------------------------------------------------------------------------
 
-bool AER_from_chip::reqRead() {
+bool  AER_from_chip::reqRead() volatile {
+  #if defined(ARDUINO_TEENSY41) || defined(ARDUINO_TEENSY40)
   return digitalReadFast(_reqPin)^_handshakeActiveLow;
+  #else
+  return digitalRead(_reqPin)^_handshakeActiveLow;
+  #endif
+  
 }
-
 
 //---------------------------------------------------------------------------------------------------------------------------------------
 // ackWrite: Writes to ACK pin
 //---------------------------------------------------------------------------------------------------------------------------------------
 
-void AER_from_chip::ackWrite(bool val) {
+void  AER_from_chip::ackWrite(bool val) volatile {
+  #if defined(ARDUINO_TEENSY41) || defined(ARDUINO_TEENSY40)
   digitalWriteFast(_ackPin, val^_handshakeActiveLow);
+  #else
+  digitalWrite(_ackPin, val^_handshakeActiveLow);
+  #endif
 }
 
 
 //----------------------------------------------------------------------------------------------------------------------------------
 // recordEvent: Records output events as they occur
 //----------------------------------------------------------------------------------------------------------------------------------
-void AER_from_chip::recordEvent() {
-  noInterrupts();
-  if (is_output_buffer_not_full() && offset_time != 0) {
+void AER_from_chip::recordEvent() volatile {
+  uint8_t interface;
     switch(_id){
-      case 0: output_ring_buffer[output_ring_buffer_next_free].data.header = OUT_AER_FROM_CHIP0; break;
-      case 1: output_ring_buffer[output_ring_buffer_next_free].data.header = OUT_AER_FROM_CHIP1; break;
-      case 2: output_ring_buffer[output_ring_buffer_next_free].data.header = OUT_AER_FROM_CHIP2; break;
-      case 3: output_ring_buffer[output_ring_buffer_next_free].data.header = OUT_AER_FROM_CHIP3; break;
-      case 4: output_ring_buffer[output_ring_buffer_next_free].data.header = OUT_AER_FROM_CHIP4; break;
-      case 5: output_ring_buffer[output_ring_buffer_next_free].data.header = OUT_AER_FROM_CHIP5; break;
-      case 6: output_ring_buffer[output_ring_buffer_next_free].data.header = OUT_AER_FROM_CHIP6; break;
-      case 7: output_ring_buffer[output_ring_buffer_next_free].data.header = OUT_AER_FROM_CHIP7; break;
-      default: output_ring_buffer[output_ring_buffer_next_free].data.header = OUT_ERROR; break;
+      case 0: interface = OUT_AER_FROM_CHIP0; break;
+      case 1: interface = OUT_AER_FROM_CHIP1; break;
+      case 2: interface = OUT_AER_FROM_CHIP2; break;
+      case 3: interface = OUT_AER_FROM_CHIP3; break;
+      case 4: interface = OUT_AER_FROM_CHIP4; break;
+      case 5: interface = OUT_AER_FROM_CHIP5; break;
+      case 6: interface = OUT_AER_FROM_CHIP6; break;
+      case 7: interface = OUT_AER_FROM_CHIP7; break;
+      default:interface = OUT_ERROR; break;
     }    
-    output_ring_buffer[output_ring_buffer_next_free].data.exec_time = micros()-offset_time;
-    output_ring_buffer[output_ring_buffer_next_free].data.value = this->getData(); 
-    output_ring_buffer_next_free = (output_ring_buffer_next_free + 1) % OUTPUT_BUFFER_SIZE;
-  }
-  interrupts();
+    send_data32(interface, this->getData());
 }
 
 //----------------------------------------------------------------------------------------------------------------------------------
@@ -303,13 +286,7 @@ uint32_t AER_from_chip::getData() {
 bool AER_from_chip_mcp23017::setupPins() {
 
 if (!mcp.begin_I2C()) {
-  if (is_output_buffer_not_full()){
-          output_ring_buffer[output_ring_buffer_next_free].error.header = OUT_ERROR_PERIPHERAL_INTERFACE_NOT_READY;
-          output_ring_buffer[output_ring_buffer_next_free].error.org_header = CONF_ACTIVE;
-          output_ring_buffer[output_ring_buffer_next_free].error.value = _id;
-          output_ring_buffer_next_free = (output_ring_buffer_next_free + 1) % OUTPUT_BUFFER_SIZE;          
-        }
-    return false;
+  error_message(OUT_ERROR_PERIPHERAL_INTERFACE_NOT_READY,CONF_ACTIVE,_id);
 }
 else{
 // reserving
