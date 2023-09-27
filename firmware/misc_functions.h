@@ -16,19 +16,11 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include "datatypes.h"
-#include "core_ring_buffer.h"
+#ifndef ISR_HELPER_H
+#define ISR_HELPER_H
+//#include <cstdint>
+#include<Arduino.h>
 
-// function to copy packet content from volotile to not volotile
-packet_t copy_packet(volatile packet_t* in){
-      packet_t out;
-      uint8_t i = 0;
-      for (i = 0; i < sizeof(packet_t); i++) out.bytes[i] = in->bytes[i]; 
-      return out;
-}
+void delay20ns( uint8_t clocks );
 
-// function to copy packet content from not volotile to volotile
-void copy_packet(packet_t* in, volatile packet_t* out){
-      uint8_t i = 0;
-      for (i = 0; i < sizeof(packet_t); i++) out->bytes[i] = in->bytes[i]; 
-}
+#endif

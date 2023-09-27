@@ -15,20 +15,33 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
+#ifndef INSTURCTION_EXEC_H
+#define INSTURCTION_EXEC_H
 
-#include "datatypes.h"
+//EXEC_PRESISION in usec
+#define EXEC_PRESISION  100 
+
 #include "core_ring_buffer.h"
+#include "datatypes.h"
+#include "interface_AER_from_chip.h"
+#include "interface_AER_to_chip.h"
+#include "interface_spi.h"
+#include "interface_pin.h"
+#include "interface_i2c.h"
+#include "core_intervaltimer_samd21.h"
 
-// function to copy packet content from volotile to not volotile
-packet_t copy_packet(volatile packet_t* in){
-      packet_t out;
-      uint8_t i = 0;
-      for (i = 0; i < sizeof(packet_t); i++) out.bytes[i] = in->bytes[i]; 
-      return out;
-}
+/*
+the instruction execution handles the 
+*/
 
-// function to copy packet content from not volotile to volotile
-void copy_packet(packet_t* in, volatile packet_t* out){
-      uint8_t i = 0;
-      for (i = 0; i < sizeof(packet_t); i++) out->bytes[i] = in->bytes[i]; 
-}
+extern volatile bool exec_active;
+extern volatile IntervalTimer myTimer;
+
+void set_time_offset(uint32_t offset);
+void read_time(bool is_ISR_call);
+
+void exec_instruction(packet_t* instruction, bool is_ISR_call);
+
+void exec_timed_commands();
+
+#endif

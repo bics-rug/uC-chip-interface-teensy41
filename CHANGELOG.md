@@ -8,9 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added 
-
+ - all executions are acklogage with timestamp to the PC
+ - added support for Teensy 4.0 (MIMXR)
+ - added support for Arduino MRKZero (SAMD21)
+ - added software reset 
+ - added python api level 1 (extablish connection + buffered communication) and 2 (object representation of uC) next to 0 (packets and headers)
+ - output buffer is now contiusly send, with optional legacy mode
+ - input buffer can now tell is number of free slots
 
 ### Fixed
+ - output buffer now behaves the same as the input buffer
+ - error packets and normal packets are send via functions
 
 
 ## [0.1.0] - 2023-01-25

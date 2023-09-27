@@ -1,6 +1,6 @@
 /*
-    This file is part of the Firmware project to interface with small Neuromorphic chips
-    Copyright (C) 2022 Ole Richter - University of Groningen
+    This file is part of the Firmware project to interface with small Async or Neuromorphic chips
+    Copyright (C) 2022-2023 Ole Richter - University of Groningen
     Copyright (C) 2022 Benjamin Hucko
 
     This program is free software: you can redistribute it and/or modify
@@ -18,18 +18,19 @@
 */
 
 // -DARDUINO_SAMD_MKRZERO -DARDUINO_ARCH_SAMD -DUSE_ARDUINO_MKR_PIN_LAYOUT -D__SAMD21G18A__ -DF_CPU=48000000L
-// -D__IMXRT1062__ -DARDUINO_TEENSY41 -DF_CPU=600000000
-4f -DUSBCON "-DUSB_MANUFACTURER=\"Arduino LLC\"" "-DUSB_PRODUCT=\"Arduino MKRZero\"" -I/home/p302212/.arduino15/packages/arduino/tools/CMSIS/4.5.0/CMSIS/Include/ -I/home/p302212/.arduino15/packages/arduino/tools/CMSIS-Atmel/1.2.0/CMSIS/Device/ATMEL/ -I/home/p302212/.arduino15/packages/arduino/hardware/samd/1.8.13/cores/arduino/api/deprecated -I/home/p302212/.arduino15/packages/arduino/hardware/samd/1.8.13/cores/arduino/api/deprecated-avr-comp -I/home/p302212/.arduino15/packages/arduino/hardware/samd/1.8.13/cores/arduino -I/home/p302212/.arduino15/packages/arduino/hardware/samd/1.8.13/variants/mkrzero -I/home/p302212/Arduino/libraries/Adafruit_MCP23017_Arduino_Library/src -I/home/p302212/Arduino/libraries/Adafruit_BusIO -I/home/p302212/.arduino15/packages/arduino/hardware/samd/1.8.13/libraries/Wire -I/home/p302212/.arduino15/packages/arduino/hardware/samd/1.8.13/libraries/SPI /tmp/arduino/sketches/A2C572F20539BEE7818185C5EA24C6E9/sketch/instruction_exec.cpp -o /tmp/arduino/sketches/A2C572F20539BEE7818185C5EA24C6E9/sketch/instruction_exec.cpp.o
+// -D__IMXRT1062__ -DARDUINO_TEENSY41 -DF_CPU=600000000 -DTEENSYDUINO
 
 
 
 #include <Arduino.h>
-#include "ring_buffer.h"
-#include "instruction_exec.h"
+#include "core_ring_buffer.h"
+#include "core_intervaltimer_samd21.h"
+#include "core_instruction_exec.h"
+//#include <avr/wdt.h>
 
 
 /*
- This programm is supposed to be used for interfacing with small neuromorphic chips,
+ This programm is supposed to be used for interfacing with small Async or Neuromorphic chips,
  the pin and interface configuration is uploaded on runtime via configuration packets,
  so for most chips/modules a change of the uC firmware is not nessesary.
 
@@ -40,9 +41,9 @@ and the command is executed at that time via interrupt. (see instruction_exec.h/
  timesteps are in usec and the role over occurs after ~71min after boot of the uC. roleover is not supported.
 
  the folloeing interfaces are supported:
- - SPI - Serial Periferal Interface for memory and fifo access (see "spi_helper.h/cpp")
+ - SPI - Serial Periferal Interface for memory and fifo access (see "Interface_spi.h/cpp")
  - AER - paralell databus with 4-phase handshake (see "AER_tochip.h/cpp" and "AER_from_chip.h/cpp")
- - PIN - manual pin raising and lowering (see "pin_helper.h/cpp")
+ - PIN - manual pin raising and lowering (see "Interface_pin.h/cpp")
  
 
  see datatypes.h for all available commands and thier use.
@@ -62,6 +63,7 @@ and the command is executed at that time via interrupt. (see instruction_exec.h/
  aswell as sets the interruptpriority for command execution
 */
 void setup() { 
+  //wdt_disable();
   Serial.begin(115200);   // the speed is ignored the USB native speed is used. 
   Serial.setTimeout(1);    
   setup_ring_buffer();
@@ -74,11 +76,15 @@ void setup() {
  in all other cases the instruction is stored in the instruction ring buffer.
 */
 void loop() {
-  if (Serial.available()) {
+  if (Serial.available() >= sizeof(packet_t)) {
 
     // read instruction packet
-    packet_t current_instruction;    
-    Serial.readBytes(current_instruction.bytes, sizeof(packet_t));
+    packet_t current_instruction; 
+    // because we use different storage allignment we need to transfer each byte individual
+    uint8_t position;
+    for (position = 0; position < sizeof(packet_t); position++){
+      Serial.readBytes(&(current_instruction.bytes[position]), 1);
+    }
 
     // exec instruction if exec_time == 0
     if (current_instruction.data.exec_time == 0) {
@@ -88,7 +94,8 @@ void loop() {
     // if instruction buffer is not full store instruction
     else if (input_ring_buffer_start != (input_ring_buffer_next_free + 1) % INPUT_BUFFER_SIZE) {
       noInterrupts();
-      input_ring_buffer[input_ring_buffer_next_free] = current_instruction;
+      copy_packet(&current_instruction,&input_ring_buffer[input_ring_buffer_next_free]);
+      //input_ring_buffer[input_ring_buffer_next_free] = current_instruction;
       input_ring_buffer_next_free = (input_ring_buffer_next_free + 1) % INPUT_BUFFER_SIZE;
       interrupts();
     }
@@ -97,13 +104,16 @@ void loop() {
     else {
       error_message_bypass_buffer(OUT_ERROR_INPUT_FULL,current_instruction.data.header,current_instruction.data.value);
     }
-
-
   }
-  // send error if output buffer is full,
-  if (output_ring_buffer_start == output_ring_buffer_next_free) {
-    error_message_bypass_buffer(OUT_ERROR_OUTPUT_FULL,OUT_ERROR_OUTPUT_FULL,output_ring_buffer_next_free);
+  
+  // write one element of the output buffer
+  if (output_buffer_read && Serial.availableForWrite()){
+    send_output_ring_buffer_first();
   } 
-  // write output buffer
+
+  // send error if output buffer is full,
+  else if (output_ring_buffer_start == (output_ring_buffer_next_free + 1) % OUTPUT_BUFFER_SIZE) {
+    error_message_bypass_buffer(OUT_ERROR_OUTPUT_FULL,OUT_ERROR,output_ring_buffer_next_free);
+  } 
 
 }

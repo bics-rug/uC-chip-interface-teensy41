@@ -1,6 +1,6 @@
 /*
-    This file is part of the Firmware project to interface with small Neuromorphic chips
-    Copyright (C) 2022 Ole Richter - University of Groningen
+    This file is part of the Firmware project to interface with small Async or Neuromorphic chips
+    Copyright (C) 2022-2023 Ole Richter - University of Groningen
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -42,6 +42,7 @@ enum inPacketHeader : uint8_t {
   IN_READ_LAST = 4U,
 
   /*
+  @todo rename to IN_RUN_EXPERIMENT
    set the execution time, if set to 0 recording and exec are halted
    if set to 1 (or bigger) exec and recoding will be started from timestep 1 (or bigger)
    uses data
@@ -61,6 +62,18 @@ enum inPacketHeader : uint8_t {
   */  
   IN_READ_INSTRUCTIONS = 3U,
   /*
+     this packet is used to request how many free spots there are in the instruction ring buffer
+  */
+  IN_FREE_INSTRUCTION_SPOTS = 5U,
+  /*
+  @todo move to sub config
+     legacy mode: turn off automatic sending of the output buffer
+     uses config
+     - value 1 for read on request (legacy)
+     - value 0 for continous read (default)
+  */
+  IN_CONF_READ_ON_REQUEST = 6U,
+  /*
    send a modify output pin command
    uses pin
     - pin is the pin number
@@ -73,91 +86,103 @@ enum inPacketHeader : uint8_t {
     - pin is the pin number
     - value is ignored
   */
-  IN_READ_PIN = 11U,
+  IN_PIN_READ = 11U,
   /*
-   sends an 8bit word on the SPI0 interface
-   uses data8
-   - value is the 8bit to be send
+   sends an 8/16/32bbit word on the SPI0 interface
+   uses data32
+   - value is the  to be send
   */
   IN_SPI0 = 20U,
   /*
-   sends an 8bit word on the SPI1 interface
-   uses data8
-   - value is the 8bit to be send
+   sends an 8/16/32bbit word on the SPI1 interface
+   uses data32
+   - value is the  to be send
   */
   IN_SPI1 = 21U,
   /*
-   sends an 8bit word on the SPI2 interface
-   uses data8
-   - value is the 8bit to be send
+   sends an 8/16/32bit word on the SPI2 interface
+   uses data32
+   - value is the to be send
   */
   IN_SPI2 = 22U,
-    /*
-   sends an 32bit word on the SPI0 interface
-   uses data32
-   - value is the 8bit to be send
+
+ /*
+   sends an 8 or 16 bit word or recives a specified number of bytes on the I2C interface
+   uses data_i2c
+   - device_address is the 7bit (MS) address of sets the ASYNC_FROM_CHIP7 configuration
+   uses config
+    - config/sub header is the config state to be applied the aer interface
+    - value is used according to the config sub headerss
+   - value_ms is the MS 8bit to be send
+   - value_ls is the LS 8bit to be send or the number of bytes to read
   */
-  IN_SPI0_32 = 23U,
-  /*
-   sends an 32bit word on the SPI1 interface
-   uses data32
-   - value is the 8bit to be send
+  IN_I2C0 = 25U,
+ /*
+   sends an 8 or 16 bit word or recives a specified number of bytes on the I2C interface
+   uses data_i2c
+   - device_address is the 7bit (MS) address of the device and the LSB indicates Read(1)/Write(0) following the i2c standard
+   - register_address is the 8bit register address
+   - value_ms is the MS 8bit to be send
+   - value_ls is the LS 8bit to be send or the number of bytes to read
   */
-  IN_SPI1_32 = 24U,
+  IN_I2C1 = 26U,
   /*
-   sends an 32bit word on the SPI2 interface
-   uses data32
-   - value is the 8bit to be send
+   sends an 8 or 16 bit word or recives a specified number of bytes on the I2C interface
+   uses data_i2c
+   - device_address is the 7bit (MS) address of the device and the LSB indicates Read(1)/Write(0) following the i2c standard
+   - register_address is the 8bit register address
+   - value_ms is the MS 8bit to be send
+   - value_ls is the LS 8bit to be send or the number of bytes to read
   */
-  IN_SPI2_32 = 25U,
+  IN_I2C2 = 27U,
   /*
-   sends an 0-32bit word on the AER_TO_CHIP0 interface
+   sends an 0-32bit word on the ASYNC_TO_CHIP0 interface
    uses data
     - value is the word to be send, if the width is configured to >32 the MS bits are ignored
   */
-  IN_AER_TO_CHIP0 = 30U,
+  IN_ASYNC_TO_CHIP0 = 30U,
   /*
-   sends an 0-32bit word on the AER_TO_CHIP1 interface
+   sends an 0-32bit word on the ASYNC_TO_CHIP1 interface
    uses data
     - value is the word to be send, if the width is configured to >32 the MS bits are ignored
   */
-  IN_AER_TO_CHIP1 = 31U,
+  IN_ASYNC_TO_CHIP1 = 31U,
   /*
-   sends an 0-32bit word on the AER_TO_CHIP2 interface
+   sends an 0-32bit word on the ASYNC_TO_CHIP2 interface
    uses data
     - value is the word to be send, if the width is configured to >32 the MS bits are ignored
   */
-  IN_AER_TO_CHIP2 = 32U,
+  IN_ASYNC_TO_CHIP2 = 32U,
   /*
-   sends an 0-32bit word on the AER_TO_CHIP3 interface
+   sends an 0-32bit word on the ASYNC_TO_CHIP3 interface
    uses data
     - value is the word to be send, if the width is configured to >32 the MS bits are ignored
   */
-  IN_AER_TO_CHIP3 = 33U,
+  IN_ASYNC_TO_CHIP3 = 33U,
   /*
-   sends an 0-32bit word on the AER_TO_CHIP4 interface
+   sends an 0-32bit word on the ASYNC_TO_CHIP4 interface
    uses data
     - value is the word to be send, if the width is configured to >32 the MS bits are ignored
   */
-  IN_AER_TO_CHIP4 = 34U,
+  IN_ASYNC_TO_CHIP4 = 34U,
   /*
-   sends an 0-32bit word on the AER_TO_CHIP5 interface
+   sends an 0-32bit word on the ASYNC_TO_CHIP5 interface
    uses data
     - value is the word to be send, if the width is configured to >32 the MS bits are ignored
   */
-  IN_AER_TO_CHIP5 = 35U,
+  IN_ASYNC_TO_CHIP5 = 35U,
   /*
-   sends an 0-32bit word on the AER_TO_CHIP6 interface
+   sends an 0-32bit word on the ASYNC_TO_CHIP6 interface
    uses data
     - value is the word to be send, if the width is configured to >32 the MS bits are ignored
   */
-  IN_AER_TO_CHIP6 = 36U,
+  IN_ASYNC_TO_CHIP6 = 36U,
   /*
-   sends an 0-32bit word on the AER_TO_CHIP7 interface
+   sends an 0-32bit word on the ASYNC_TO_CHIP7 interface
    uses data
     - value is the word to be send, if the width is configured to >32 the MS bits are ignored
   */
-  IN_AER_TO_CHIP7 = 37U,
+  IN_ASYNC_TO_CHIP7 = 37U,
   /*
    sets the pin configuration
    uses config
@@ -186,118 +211,152 @@ enum inPacketHeader : uint8_t {
     - value is used according to the config sub header
   */
   IN_CONF_SPI2 = 62U, 
+
   /*
-   sets the AER_TO_CHIP0 configuration
+   sets the i2c0 configuration
+   uses config
+    - config/sub header is the config state to be applied the spi
+    - value is used according to the config sub header
+  */
+  IN_CONF_I2C0 = 65U,
+   /*
+  sets the i2c1 configuration
+   uses config
+    - config/sub header is the config state to be applied the spi
+    - value is used according to the config sub header
+  */
+  IN_CONF_I2C1 = 66U, 
+   /*
+   sets the i2c2 configuration
+   uses config
+    - config/sub header is the config state to be applied the spi
+    - value is used according to the config sub header
+  */
+  IN_CONF_I2C2 = 67U, 
+  /*
+   sets the ASYNC_TO_CHIP0 configuration
    uses config
     - config/sub header is the config state to be applied the aer interface
     - value is used according to the config sub header
   */
-  IN_CONF_AER_TO_CHIP0 = 70U,
+  IN_CONF_ASYNC_TO_CHIP0 = 70U,
   /*
-   sets the AER_TO_CHIP1 configuration
+   sets the ASYNC_TO_CHIP1 configuration
    uses config
     - config/sub header is the config state to be applied the aer interface
     - value is used according to the config sub header
   */
-  IN_CONF_AER_TO_CHIP1 = 71U,
+  IN_CONF_ASYNC_TO_CHIP1 = 71U,
   /*
-   sets the AER_TO_CHIP2 configuration
+   sets the ASYNC_TO_CHIP2 configuration
    uses config
     - config/sub header is the config state to be applied the aer interface
     - value is used according to the config sub header
   */
-  IN_CONF_AER_TO_CHIP2 = 72U,
+  IN_CONF_ASYNC_TO_CHIP2 = 72U,
   /*
-   sets the AER_TO_CHIP3 configuration
+   sets the ASYNC_TO_CHIP3 configuration
    uses config
     - config/sub header is the config state to be applied the aer interface
     - value is used according to the config sub header
   */
-  IN_CONF_AER_TO_CHIP3 = 73U,
+  IN_CONF_ASYNC_TO_CHIP3 = 73U,
   /*
-   sets the AER_TO_CHIP4 configuration
+   sets the ASYNC_TO_CHIP4 configuration
    uses config
     - config/sub header is the config state to be applied the aer interface
     - value is used according to the config sub header
   */
-  IN_CONF_AER_TO_CHIP4 = 74U,
+  IN_CONF_ASYNC_TO_CHIP4 = 74U,
   /*
-   sets the AER_TO_CHIP5 configuration
+   sets the ASYNC_TO_CHIP5 configuration
    uses config
     - config/sub header is the config state to be applied the aer interface
     - value is used according to the config sub header
   */
-  IN_CONF_AER_TO_CHIP5 = 75U,
+  IN_CONF_ASYNC_TO_CHIP5 = 75U,
   /*
-   sets the AER_TO_CHIP6 configuration
+   sets the ASYNC_TO_CHIP6 configuration
    uses config
     - config/sub header is the config state to be applied the aer interface
     - value is used according to the config sub header
   */
-  IN_CONF_AER_TO_CHIP6 = 76U,
+  IN_CONF_ASYNC_TO_CHIP6 = 76U,
   /*
-   sets the AER_TO_CHIP7 configuration
+   sets the ASYNC_TO_CHIP7 configuration
    uses config
     - config/sub header is the config state to be applied the aer interface
     - value is used according to the config sub header
   */
-  IN_CONF_AER_TO_CHIP7 = 77U,
+  IN_CONF_ASYNC_TO_CHIP7 = 77U,
   /*
-   sets the AER_FROM_CHIP0 configuration
+   sets the ASYNC_FROM_CHIP0 configuration
    uses config
     - config/sub header is the config state to be applied the aer interface
     - value is used according to the config sub header
   */
-  IN_CONF_AER_FROM_CHIP0 = 80U,
+  IN_CONF_ASYNC_FROM_CHIP0 = 80U,
   /*
-   sets the AER_FROM_CHIP1 configuration
+   sets the ASYNC_FROM_CHIP1 configuration
    uses config
     - config/sub header is the config state to be applied the aer interface
     - value is used according to the config sub header
   */
-  IN_CONF_AER_FROM_CHIP1 = 81U,
+  IN_CONF_ASYNC_FROM_CHIP1 = 81U,
   /*
-   sets the AER_FROM_CHIP2 configuration
+   sets the ASYNC_FROM_CHIP2 configuration
    uses config
     - config/sub header is the config state to be applied the aer interface
     - value is used according to the config sub header
   */
-  IN_CONF_AER_FROM_CHIP2 = 82U,
+  IN_CONF_ASYNC_FROM_CHIP2 = 82U,
   /*
-   sets the AER_FROM_CHIP3 configuration
+   sets the ASYNC_FROM_CHIP3 configuration
    uses config
     - config/sub header is the config state to be applied the aer interface
     - value is used according to the config sub header
   */
-  IN_CONF_AER_FROM_CHIP3 = 83U, 
+  IN_CONF_ASYNC_FROM_CHIP3 = 83U, 
   /*
-   sets the AER_FROM_CHIP4 configuration
+   sets the ASYNC_FROM_CHIP4 configuration
    uses config
     - config/sub header is the config state to be applied the aer interface
     - value is used according to the config sub header
   */
-  IN_CONF_AER_FROM_CHIP4 = 84U,
+  IN_CONF_ASYNC_FROM_CHIP4 = 84U,
   /*
-   sets the AER_FROM_CHIP5 configuration
+   sets the ASYNC_FROM_CHIP5 configuration
    uses config
     - config/sub header is the config state to be applied the aer interface
     - value is used according to the config sub header
   */
-  IN_CONF_AER_FROM_CHIP5 = 85U, 
+  IN_CONF_ASYNC_FROM_CHIP5 = 85U, 
   /*
-   sets the AER_FROM_CHIP6 configuration
+   sets the ASYNC_FROM_CHIP6 configuration
    uses config
     - config/sub header is the config state to be applied the aer interface
     - value is used according to the config sub header
   */
-  IN_CONF_AER_FROM_CHIP6 = 86U,
+  IN_CONF_ASYNC_FROM_CHIP6 = 86U,
   /*
-   sets the AER_FROM_CHIP7 configuration
+   sets the ASYNC_FROM_CHIP7 configuration
    uses config
     - config/sub header is the config state to be applied the aer interface
     - value is used according to the config sub header
   */
-  IN_CONF_AER_FROM_CHIP7 = 87U, 
+  IN_CONF_ASYNC_FROM_CHIP7 = 87U, 
+
+  /*
+   chip config to free up main headers
+  */
+  IN_CONF_UC = 99U, 
+
+  /*
+     this packet is used to reset the full uC
+     uses data
+      - value is ignored
+  */
+  IN_RESET = 254U,
   
 };
 
@@ -310,6 +369,7 @@ enum inPacketHeader : uint8_t {
   - other transaction messages
 */
 enum outPacketHeader : uint8_t {
+
   /*
    responce to the READ_TIME packet
    uses data
@@ -317,6 +377,10 @@ enum outPacketHeader : uint8_t {
     - value the system_time (without run time offset)
   */
   OUT_TIME = 100U,
+  /*
+     this packet is used to report how many free spots there are in the instruction ring buffer
+  */
+  OUT_FREE_INSTRUCTION_SPOTS = 101U,
   /*
    After a input pin change this records the change
    uses pin
@@ -326,103 +390,104 @@ enum outPacketHeader : uint8_t {
   */
   OUT_PIN = 110U,
   /*
-   responce to the IN_SPI0 packet
-   uses data8
-    - exec_time the current run time 
-    - value the 8bit word that was read on the SPI
-  */
-  OUT_SPI0 = 120U,
-  /*
-   responce to the IN_SPI1 packet
-   uses data8
-    - exec_time the current run time 
-    - value the 8bit word that was read on the SPI
-  */
-  OUT_SPI1 = 121U,
-  /*
-   responce to the IN_SPI2 packet
-   uses data8
-    - exec_time the current run time 
-    - value the 8bit word that was read on the SPI
-  */
-  OUT_SPI2 = 122U,
-  /*
    responce to the IN_SPI0_32 packet
    uses data32
     - exec_time the current run time 
     - value the 32bit word that was read on the SPI
   */
-  OUT_SPI0_32 = 123U,
+  OUT_SPI0 = 120U,
   /*
    responce to the IN_SPI1_32 packet
    uses data32
     - exec_time the current run time 
     - value the 32bit word that was read on the SPI
   */
-  OUT_SPI1_32 = 124U,
+  OUT_SPI1 = 121U,
   /*
    responce to the IN_SPI2_32 packet
    uses data32
     - exec_time the current run time 
     - value the 32bit word that was read on the SPI
   */
-  OUT_SPI2_32 = 125U,
+  OUT_SPI2 = 122U,
+
   /*
-   a event was reseved on AER_FROM_CHIP0
+   responce to the IN_I2C0 packet
+   uses data32
+    - exec_time the current run time 
+    - value the 8/16bit word that was read on the I2C
+  */
+  OUT_I2C0 = 125U,
+  /*
+   responce to the IN_I2C1 packet
+   uses data32
+    - exec_time the current run time 
+    - value the 8/16bit word that was read on the I2C
+  */
+  OUT_I2C1 = 126U,
+  /*
+   responce to the IN_I2C2 packet
+   uses data32
+    - exec_time the current run time 
+    - value the 8/16bit word that was read on the I2C
+  */
+  OUT_I2C2 = 127U,
+  /*
+   a event was reseved on ASYNC_FROM_CHIP0
    uses data
     - exec_time the current run time 
     - value the 0-32bit word that was read on the AER
   */
-  OUT_AER_FROM_CHIP0 = 130U,
+  OUT_ASYNC_FROM_CHIP0 = 130U,
   /*
-   a event was reseved on AER_FROM_CHIP1
+   a event was reseved on ASYNC_FROM_CHIP1
    uses data
     - exec_time the current run time 
     - value the 0-32bit word that was read on the AER
   */
-  OUT_AER_FROM_CHIP1 = 131U,
+  OUT_ASYNC_FROM_CHIP1 = 131U,
   /*
-   a event was reseved on AER_FROM_CHIP2
+   a event was reseved on ASYNC_FROM_CHIP2
    uses data
     - exec_time the current run time 
     - value the 0-32bit word that was read on the AER
   */
-  OUT_AER_FROM_CHIP2 = 132U,
+  OUT_ASYNC_FROM_CHIP2 = 132U,
   /*
-   a event was reseved on AER_FROM_CHIP3
+   a event was reseved on ASYNC_FROM_CHIP3
    uses data
     - exec_time the current run time 
     - value the 0-32bit word that was read on the AER
   */
-  OUT_AER_FROM_CHIP3 = 133U,
+  OUT_ASYNC_FROM_CHIP3 = 133U,
   /*
-   a event was reseved on AER_FROM_CHIP4
+   a event was reseved on ASYNC_FROM_CHIP4
    uses data
     - exec_time the current run time 
     - value the 0-32bit word that was read on the AER
   */
-  OUT_AER_FROM_CHIP4 = 134U,
+  OUT_ASYNC_FROM_CHIP4 = 134U,
   /*
-   a event was reseved on AER_FROM_CHIP5
+   a event was reseved on ASYNC_FROM_CHIP5
    uses data
     - exec_time the current run time 
     - value the 0-32bit word that was read on the AER
   */
-  OUT_AER_FROM_CHIP5 = 135U,
+  OUT_ASYNC_FROM_CHIP5 = 135U,
   /*
-   a event was reseved on AER_FROM_CHIP6
+   a event was reseved on ASYNC_FROM_CHIP6
    uses data
     - exec_time the current run time 
     - value the 0-32bit word that was read on the AER
   */
-  OUT_AER_FROM_CHIP6 = 136U,
+  OUT_ASYNC_FROM_CHIP6 = 136U,
   /*
-   a event was reseved on AER_FROM_CHIP7
+   a event was reseved on ASYNC_FROM_CHIP7
    uses data
     - exec_time the current run time 
     - value the 0-32bit word that was read on the AER
   */
-  OUT_AER_FROM_CHIP7 = 137U,
+  OUT_ASYNC_FROM_CHIP7 = 137U,
   /*
    
    uses 
@@ -472,7 +537,7 @@ enum outPacketHeader : uint8_t {
    
    uses 
   */
-  OUT_ERROR_AER_HS_TIMEOUT = 209U,
+  OUT_ERROR_ASYNC_HS_TIMEOUT = 209U,
   /*
    this error is thrown when a peripheral interface is not ready
    For example: the I2C for the MCP23017 is not ready
@@ -485,19 +550,13 @@ enum outPacketHeader : uint8_t {
     - id is the wrong id
   */
   OUT_ERROR_CONFIGURATION_OUT_OF_BOUNDS = 211U,
- /*
-   this packet is used to destinguish between an empty and a full buffer
-   uses data
-    - value is 1 so ignore
-  */
- 
-  OUT_BUFFER_LAST_READ = 250U,
-
   /*
-   
-   header used to return success status after pin confiuration.
+   the data you send is larger the the configured bit/byte width of the interface
+  uses error_package
+    - the wrong data
   */
-  OUT_SUCCESS_PIN_CONFIGURED = 240U,
+  OUT_ERROR_DATA_OUT_OF_BOUNDS = 212U,
+ 
  
   
 };
@@ -549,22 +608,23 @@ enum confPacketHeader : uint8_t {
   */
   CONF_REQ_DELAY = 73U,
   /*
-   if the req and ack are active low or high
-   uses config
-    - value 0 for active high, value 1 for active low
+   interface_order
+    - value LSFIRST = 0 and MSFIRST = 1 - default is 0
   */
-  CONF_HS_ACTIVE_LOW = 74U,
+  CONF_BYTE_ORDER = 74U,
   /*
-   if the data channels are active low or high
-   uses config
-    - value 0 for active high, value 1 for active low
+   interface speed class se interface doc
   */
-  CONF_DATA_ACTIVE_LOW = 75U,
+  CONF_SPEED_CLASS = 75U,
   /*
    interface_type
     - value type id (see interface doc) - default is 0
   */
   CONF_TYPE = 76U,
+  /*
+    indication of no sub category
+  */
+  CONF_NONE = 255U,
   /*
    setting the pin for AER data channel X
    uses config
@@ -603,7 +663,6 @@ enum confPacketHeader : uint8_t {
   CONF_CHANNEL29 = 29U,
   CONF_CHANNEL30 = 30U,
   CONF_CHANNEL31 = 31U,
-  CONF_CHANNEL32 = 32U,
 
 
 };
@@ -616,69 +675,83 @@ the 9 bytes can be utilised in different ways:
 /*
 the data32 packet format: 9 bytes
 */
-#pragma pack(1)
+#pragma pack(push,1)
 struct data32_t{
   uint8_t header;
   uint32_t exec_time;
   uint32_t value;
 };
-
+#pragma pack(pop)
 /*
 the data8 packet format: 6 bytes
 */
-#pragma pack(1)
+#pragma pack(push,1)
 struct data8_t{
   uint8_t header;
   uint32_t exec_time;
   uint8_t value;
 };
-
+#pragma pack(pop)
 /*
-the config packet format: 7 bytes
+the data_i2c_t packet format: 9 bytes
 */
-#pragma pack(1)
+#pragma pack(push,1)
+struct data_i2c_t{
+  uint8_t header;
+  uint32_t exec_time;
+  uint8_t component_address;
+  uint8_t register_address;
+  uint8_t value_ms;
+  uint8_t value_ls;
+};
+#pragma pack(pop)
+/*
+the config packet format: 9 bytes
+*/
+#pragma pack(push,1)
 struct config_t{
   uint8_t header;
   uint32_t exec_time;
   uint8_t config_header;
   uint8_t value;
 };
-
+#pragma pack(pop)
 /*
 the pin packet format: 7 bytes
 */
-#pragma pack(1)
+#pragma pack(push,1)
 struct pin_t {
   uint8_t header;
   uint32_t exec_time;
   uint8_t id;
   uint8_t value;
 };
-
+#pragma pack(pop)
 /*
-the error packet format: 6 bytes
+the error packet format: 7 bytes
 */
-#pragma pack(1)
+#pragma pack(push,1)
 struct error_t{
   uint8_t header;
   uint8_t org_header;
   uint32_t value;
+  uint8_t sub_header;
 };
-
+#pragma pack(pop)
 /*
 the struct packet_t is 9 byte big,
 the 9 bytes can be utilised in different ways
 */
-#pragma pack(1)
+#pragma pack(push,1)
 union packet_t{
   uint8_t bytes[1+4+4];
   data32_t data;
-  data8_t data_8;
+  data_i2c_t data_i2c;
   config_t config;
   pin_t pin;
   error_t error;
 };
-#pragma pack(reset)
+#pragma pack(pop)
 
 /*
 helper function to deep copy packets from volotile to not volotile and reverse
