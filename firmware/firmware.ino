@@ -62,10 +62,6 @@ void setup() {
   setup_ring_buffer();
 
   myTimer.priority(200); 
-
-  pinMode(3, OUTPUT);
-  digitalWrite(3, LOW);
-
 }
 
 /*

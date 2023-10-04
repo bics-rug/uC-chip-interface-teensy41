@@ -106,7 +106,6 @@ void send_output_ring_buffer_last(){
 
 void send_input_ring_buffer(){
 
-  digitalWrite(3, HIGH);
   
   uint32_t ring_buffer_start = input_ring_buffer_start;
   interrupts(); 

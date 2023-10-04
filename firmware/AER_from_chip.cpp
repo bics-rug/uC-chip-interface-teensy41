@@ -18,6 +18,8 @@
 */
 #include <Arduino.h>
 #include "AER_from_chip.h"
+#include <Wire.h>
+
 
 
 // reserve and clear the memory of the static global variables.
@@ -31,6 +33,11 @@ volatile bool AER_from_chip::hs_lowactive[8] = {};
 volatile bool AER_from_chip::data_lowactive[8] = {};
 volatile bool AER_from_chip::active[8] = {};
 volatile AER_from_chip* AER_from_chip::inst[8] = {};
+volatile uint8_t  count_shift = 0;
+const uint8_t GPIOA = 18U;
+const uint8_t MCP0 = 32U;
+const uint8_t MCP1 = 33U;
+
 
 // handles incomming configuraion packets
 void AER_from_chip::configure(uint8_t id, uint8_t config, uint8_t data){
@@ -245,12 +252,19 @@ if (reserve_input_pin(_reqPin)) pinMode(_reqPin, INPUT);
 else return false;
 if (reserve_output_pin(_ackPin)) pinMode(_ackPin, OUTPUT);
 else return false;
+Wire.begin();
+Wire.setClock(400000);
+// if (!reserve_input_pin(18) || !reserve_input_pin(19)) return false;
+// Wire.beginTransmission(MCP0);
+// Wire.write(GPIOA);
+// uint8_t outcome;
+// data = Wire.endTransmission();
+// if (outcome == 0){
+//   pinMode(13,OUTPUT);
+//   digitalWrite(13,HIGH);
+// }
+return true;
 
-  for(int i = 0; i < _numDataPins; i++) {
-    if (reserve_input_pin(_dataPins[i])) pinMode(_dataPins[i], INPUT);
-    else return false;
-  }
-  return true;
 }
 
 
@@ -260,11 +274,26 @@ else return false;
 
 uint32_t AER_from_chip::getData() {
   uint32_t data = 0;
+  uint8_t count_shift = 0;
   if (_delay) {
     delay20ns(_delay);
   }
-  for (int i = 0; i < _numDataPins; i++) {
-    data |= digitalReadFast(_dataPins[i]) << i; // @todo read with direct pin access
+  
+  Wire.beginTransmission(MCP0);
+  Wire.write(GPIOA);
+  Wire.endTransmission();
+  Wire.requestFrom(MCP0,2,true);
+  while (Wire.available()>0){
+    data |= Wire.read()<<8*count_shift;
+    count_shift++;
+  }
+  Wire.beginTransmission(MCP1);
+  Wire.write(GPIOA);
+  Wire.endTransmission(false);
+  Wire.requestFrom(MCP1,(uint8_t) 2,true);
+  while (Wire.available()>0){
+    data |= Wire.read()<<8*count_shift;
+    count_shift++;
   }
   if (_dataActiveLow) {
     return ~data;
