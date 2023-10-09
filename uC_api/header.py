@@ -34,6 +34,10 @@ with value field empty
 @enum.unique
 class Data32bitHeader(enum.IntEnum) :
     """
+    this packet tells the PC buffer to close the connection to the uC
+    """
+    UC_CLOSE_CONNECTION = 255
+    """
      this packet is used to software reset the uC (clear the config), no harware reset is performed
     """
     IN_RESET = 254
@@ -82,10 +86,18 @@ class Data32bitHeader(enum.IntEnum) :
     """
     IN_SET_TIME = 1 
     """
+     responce to the READ_TIME packet
+     uses data
+      - exec_time the current run time 
+      - value the system_time (without run time offset)
+    """
+    OUT_TIME = 100
+    """
      sends an 32bit word on the SPI0 interface
      uses data32
      - value is the 32bit to be send
     """
+    
     IN_SPI0 = 20
     """
      sends an 32bit word on the SPI1 interface
@@ -122,116 +134,110 @@ class Data32bitHeader(enum.IntEnum) :
     OUT_SPI2 = 122
 
     """
-     sends an 0-32bit word on the AER_TO_CHIP0 interface
+     sends an 0-32bit word on the ASYNC_TO_CHIP0 interface
      uses data
       - value is the word to be send, if the width is configured to >32 the MS bits are ignored
     """
-    IN_AER_TO_CHIP0 = 30
+    IN_ASYNC_TO_CHIP0 = 30
     """
-     sends an 0-32bit word on the AER_TO_CHIP1 interface
+     sends an 0-32bit word on the ASYNC_TO_CHIP1 interface
      uses data
       - value is the word to be send, if the width is configured to >32 the MS bits are ignored
     """
-    IN_AER_TO_CHIP1 = 31
+    IN_ASYNC_TO_CHIP1 = 31
     """
-     sends an 0-32bit word on the AER_TO_CHIP2 interface
+     sends an 0-32bit word on the ASYNC_TO_CHIP2 interface
      uses data
       - value is the word to be send, if the width is configured to >32 the MS bits are ignored
     """
-    IN_AER_TO_CHIP2 = 32
+    IN_ASYNC_TO_CHIP2 = 32
     """
-     sends an 0-32bit word on the AER_TO_CHIP3 interface
+     sends an 0-32bit word on the ASYNC_TO_CHIP3 interface
      uses data
       - value is the word to be send, if the width is configured to >32 the MS bits are ignored
     """
-    IN_AER_TO_CHIP3 = 33
+    IN_ASYNC_TO_CHIP3 = 33
     """
-     sends an 0-32bit word on the AER_TO_CHIP4 interface
+     sends an 0-32bit word on the ASYNC_TO_CHIP4 interface
      uses data
       - value is the word to be send, if the width is configured to >32 the MS bits are ignored
     """
-    IN_AER_TO_CHIP4 = 34
+    IN_ASYNC_TO_CHIP4 = 34
     """
-     sends an 0-32bit word on the AER_TO_CHIP5 interface
+     sends an 0-32bit word on the ASYNC_TO_CHIP5 interface
      uses data
       - value is the word to be send, if the width is configured to >32 the MS bits are ignored
     """
-    IN_AER_TO_CHIP5 = 35
+    IN_ASYNC_TO_CHIP5 = 35
     """
-     sends an 0-32bit word on the AER_TO_CHIP6 interface
+     sends an 0-32bit word on the ASYNC_TO_CHIP6 interface
      uses data
       - value is the word to be send, if the width is configured to >32 the MS bits are ignored
     """
-    IN_AER_TO_CHIP6 = 36
+    IN_ASYNC_TO_CHIP6 = 36
     """
-     sends an 0-32bit word on the AER_TO_CHIP7 interface
+     sends an 0-32bit word on the ASYNC_TO_CHIP7 interface
      uses data
       - value is the word to be send, if the width is configured to >32 the MS bits are ignored
     """
-    IN_AER_TO_CHIP7 = 37
+    IN_ASYNC_TO_CHIP7 = 37
+
     """
-     responce to the READ_TIME packet
-     uses data
-      - exec_time the current run time 
-      - value the system_time (without run time offset)
-    """
-    OUT_TIME = 100
-    """
-     a event was reseved on AER_FROM_CHIP0
+     a event was reseved on ASYNC_FROM_CHIP0
      uses data
       - exec_time the current run time 
       - value the 0-32bit word that was read on the AER
     """
-    OUT_AER_FROM_CHIP0 = 130
+    OUT_ASYNC_FROM_CHIP0 = 130
     """
-     a event was reseved on AER_FROM_CHIP1
+     a event was reseved on ASYNC_FROM_CHIP1
      uses data
       - exec_time the current run time 
       - value the 0-32bit word that was read on the AER
     """
-    OUT_AER_FROM_CHIP1 = 131
+    OUT_ASYNC_FROM_CHIP1 = 131
     """
-     a event was reseved on AER_FROM_CHIP2
+     a event was reseved on ASYNC_FROM_CHIP2
      uses data
       - exec_time the current run time 
       - value the 0-32bit word that was read on the AER
     """
-    OUT_AER_FROM_CHIP2 = 132
+    OUT_ASYNC_FROM_CHIP2 = 132
     """
-     a event was reseved on AER_FROM_CHIP3
+     a event was reseved on ASYNC_FROM_CHIP3
      uses data
       - exec_time the current run time 
       - value the 0-32bit word that was read on the AER
     """
-    OUT_AER_FROM_CHIP3 = 133
+    OUT_ASYNC_FROM_CHIP3 = 133
     """
-     a event was reseved on AER_FROM_CHIP4
+     a event was reseved on ASYNC_FROM_CHIP4
      uses data
       - exec_time the current run time 
       - value the 0-32bit word that was read on the AER
     """
-    OUT_AER_FROM_CHIP4 = 134
+    OUT_ASYNC_FROM_CHIP4 = 134
     """
-     a event was reseved on AER_FROM_CHIP5
+     a event was reseved on ASYNC_FROM_CHIP5
      uses data
       - exec_time the current run time 
       - value the 0-32bit word that was read on the AER
     """
-    OUT_AER_FROM_CHIP5 = 135
+    OUT_ASYNC_FROM_CHIP5 = 135
     """
-     a event was reseved on AER_FROM_CHIP6
+     a event was reseved on ASYNC_FROM_CHIP6
      uses data
       - exec_time the current run time 
       - value the 0-32bit word that was read on the AER
     """
-    OUT_AER_FROM_CHIP6 = 136
+    OUT_ASYNC_FROM_CHIP6 = 136
     """
-     a event was reseved on AER_FROM_CHIP7
+     a event was reseved on ASYNC_FROM_CHIP7
      uses data
       - exec_time the current run time 
       - value the 0-32bit word that was read on the AER
     """
-    OUT_AER_FROM_CHIP7 = 137
+    OUT_ASYNC_FROM_CHIP7 = 137
 
     OUT_SUCCESS_PIN_CONFIGURED = 240
 
@@ -349,117 +355,138 @@ class ConfigMainHeader(enum.IntEnum) :
     """
     IN_CONF_SPI2 = 62 
     """
-     sets the AER_TO_CHIP0 configuration
+     sets the i2c0 configuration
+     uses config
+      - config/sub header is the config state to be applied the spi
+      - value is used according to the config sub header
+    """
+    IN_CONF_I2C0 = 65
+    """
+    sets the i2c1 configuration
+     uses config
+      - config/sub header is the config state to be applied the spi
+      - value is used according to the config sub header
+    """
+    IN_CONF_I2C1 = 66
+    """
+     sets the i2c2 configuration
+     uses config
+      - config/sub header is the config state to be applied the spi
+      - value is used according to the config sub header
+    """
+    IN_CONF_I2C2 = 67
+    """
+     sets the ASYNC_TO_CHIP0 configuration
      uses config
       - config/sub header is the config state to be applied the aer interface
       - value is used according to the config sub header
     """
-    IN_CONF_AER_TO_CHIP0 = 70
+    IN_CONF_ASYNC_TO_CHIP0 = 70
     """
-     sets the AER_TO_CHIP1 configuration
+     sets the ASYNC_TO_CHIP1 configuration
      uses config
       - config/sub header is the config state to be applied the aer interface
       - value is used according to the config sub header
     """
-    IN_CONF_AER_TO_CHIP1 = 71
+    IN_CONF_ASYNC_TO_CHIP1 = 71
     """
-     sets the AER_TO_CHIP2 configuration
+     sets the ASYNC_TO_CHIP2 configuration
      uses config
       - config/sub header is the config state to be applied the aer interface
       - value is used according to the config sub header
     """
-    IN_CONF_AER_TO_CHIP2 = 72
+    IN_CONF_ASYNC_TO_CHIP2 = 72
     """
-     sets the AER_TO_CHIP3 configuration
+     sets the ASYNC_TO_CHIP3 configuration
      uses config
       - config/sub header is the config state to be applied the aer interface
       - value is used according to the config sub header
     """
-    IN_CONF_AER_TO_CHIP3 = 73
+    IN_CONF_ASYNC_TO_CHIP3 = 73
     """
-     sets the AER_TO_CHIP4 configuration
+     sets the ASYNC_TO_CHIP4 configuration
      uses config
       - config/sub header is the config state to be applied the aer interface
       - value is used according to the config sub header
     """
-    IN_CONF_AER_TO_CHIP4 = 74
+    IN_CONF_ASYNC_TO_CHIP4 = 74
     """
-     sets the AER_TO_CHIP5 configuration
+     sets the ASYNC_TO_CHIP5 configuration
      uses config
       - config/sub header is the config state to be applied the aer interface
       - value is used according to the config sub header
     """
-    IN_CONF_AER_TO_CHIP5 = 75
+    IN_CONF_ASYNC_TO_CHIP5 = 75
     """
-     sets the AER_TO_CHIP6 configuration
+     sets the ASYNC_TO_CHIP6 configuration
      uses config
       - config/sub header is the config state to be applied the aer interface
       - value is used according to the config sub header
     """
-    IN_CONF_AER_TO_CHIP6 = 76
+    IN_CONF_ASYNC_TO_CHIP6 = 76
     """
-     sets the AER_TO_CHIP7 configuration
+     sets the ASYNC_TO_CHIP7 configuration
      uses config
       - config/sub header is the config state to be applied the aer interface
       - value is used according to the config sub header
     """
-    IN_CONF_AER_TO_CHIP7 = 77
+    IN_CONF_ASYNC_TO_CHIP7 = 77
     """
-     sets the AER_FROM_CHIP0 configuration
+     sets the ASYNC_FROM_CHIP0 configuration
      uses config
       - config/sub header is the config state to be applied the aer interface
       - value is used according to the config sub header
     """
-    IN_CONF_AER_FROM_CHIP0 = 80
+    IN_CONF_ASYNC_FROM_CHIP0 = 80
     """
-     sets the AER_FROM_CHIP1 configuration
+     sets the ASYNC_FROM_CHIP1 configuration
      uses config
       - config/sub header is the config state to be applied the aer interface
       - value is used according to the config sub header
     """
-    IN_CONF_AER_FROM_CHIP1 = 81
+    IN_CONF_ASYNC_FROM_CHIP1 = 81
     """
-     sets the AER_FROM_CHIP2 configuration
+     sets the ASYNC_FROM_CHIP2 configuration
      uses config
       - config/sub header is the config state to be applied the aer interface
       - value is used according to the config sub header
     """
-    IN_CONF_AER_FROM_CHIP2 = 82
+    IN_CONF_ASYNC_FROM_CHIP2 = 82
     """
-     sets the AER_FROM_CHIP3 configuration
+     sets the ASYNC_FROM_CHIP3 configuration
      uses config
       - config/sub header is the config state to be applied the aer interface
       - value is used according to the config sub header
     """
-    IN_CONF_AER_FROM_CHIP3 = 83 
+    IN_CONF_ASYNC_FROM_CHIP3 = 83 
     """
-     sets the AER_FROM_CHIP4 configuration
+     sets the ASYNC_FROM_CHIP4 configuration
      uses config
       - config/sub header is the config state to be applied the aer interface
       - value is used according to the config sub header
     """
-    IN_CONF_AER_FROM_CHIP4 = 84
+    IN_CONF_ASYNC_FROM_CHIP4 = 84
     """
-     sets the AER_FROM_CHIP5 configuration
+     sets the ASYNC_FROM_CHIP5 configuration
      uses config
       - config/sub header is the config state to be applied the aer interface
       - value is used according to the config sub header
     """
-    IN_CONF_AER_FROM_CHIP5 = 85 
+    IN_CONF_ASYNC_FROM_CHIP5 = 85 
     """
-     sets the AER_FROM_CHIP6 configuration
+     sets the ASYNC_FROM_CHIP6 configuration
      uses config
       - config/sub header is the config state to be applied the aer interface
       - value is used according to the config sub header
     """
-    IN_CONF_AER_FROM_CHIP6 = 86
+    IN_CONF_ASYNC_FROM_CHIP6 = 86
     """
-     sets the AER_FROM_CHIP7 configuration
+     sets the ASYNC_FROM_CHIP7 configuration
      uses config
       - config/sub header is the config state to be applied the aer interface
       - value is used according to the config sub header
     """
-    IN_CONF_AER_FROM_CHIP7 = 87 
+    IN_CONF_ASYNC_FROM_CHIP7 = 87 
 
 
 """
@@ -516,7 +543,7 @@ class ErrorHeader(enum.IntEnum) :
      
      uses 
     """
-    OUT_ERROR_AER_HS_TIMEOUT = 209
+    OUT_ERROR_ASYNC_HS_TIMEOUT = 209
     """
     this error is thrown when a peripheral interface is not ready
     For example: the I2C for the MCP23017 is not ready

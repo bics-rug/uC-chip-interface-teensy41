@@ -66,6 +66,7 @@ void set_pin(uint8_t id, uint32_t data);
 */
 void read_pin(uint8_t id);
 
+void debug_pin(uint8_t id, uint8_t value = HIGH);
 
 void pin_ISR(uint8_t id);
 void pin_ISR0();

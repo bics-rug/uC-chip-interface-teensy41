@@ -31,6 +31,7 @@ enum ASYNC_TYPE : uint8_t {
     ASYNC_4Phase_Chigh_Dhigh = 0U,
     ASYNC_4Phase_Clow_Dhigh = 1U,
     ASYNC_2Phase = 10U,
+    ASYNC_4Phase_MCP23017 = 20U,
 };
 
 

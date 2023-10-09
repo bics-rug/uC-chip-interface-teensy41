@@ -57,6 +57,7 @@ void Interface_spi::configure(uint8_t id, uint8_t config_option, uint8_t data){
                                     Interface_spi::mode[id],
                                     Interface_spi::byte_order[id]);
         send_config(interface,config_option,1);
+        return;
       case CONF_WIDTH:
         if (data > 4 || data <=0) {
           error_message(OUT_ERROR_CONFIGURATION_OUT_OF_BOUNDS,interface,data,config_option);

@@ -17,7 +17,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-import serial, sys, time, struct
+import serial, sys, time, struct, logging
 from enum import Enum
 
 sys.path.append('../uC_api')
@@ -26,6 +26,8 @@ sys.path.append('./uC_api')
 from packet import ConfigPacket, PinPacket, Data32bitPacket, Packet
 from header import ConfigMainHeader, ConfigSubHeader, PinHeader, Data32bitHeader
 from uC import uC_api
+
+logging.basicConfig(level=logging.INFO)
 
 # 1. connecting to uC (open serial port).
 
@@ -40,7 +42,7 @@ pinConfigPacket = Data32bitPacket(
 	value = 1)	
 
 uc.send_packet(pinConfigPacket) # send start.
-
+time.sleep(1)
 if uc.has_packet():
     print('> pin config request responce: {}'.format(str(uc.read_packet())))
 else:
@@ -54,7 +56,7 @@ pinConfigPacket = ConfigPacket(
 # 3. send pin configuration to uC.
 
 uc.send_packet(pinConfigPacket) # send pin configuration.
-
+time.sleep(1)
 if uc.has_packet():
     print('> pin config request responce: {}'.format(str(uc.read_packet())))
 else:
@@ -66,25 +68,24 @@ pinPacket = PinPacket(
 	value = 0)		
 
 uc.send_packet(pinPacket) # send pin read.
-
+time.sleep(1)
 if uc.has_packet():
     print('> pin state: {}'.format(str(uc.read_packet())))
 else:
     print('> [error] no pin read responce: ')
-
+time.sleep(1)
 if uc.has_packet():
     print('> pin state: {}'.format(str(uc.read_packet())))
 else:
     print('> [error] no pin read confirmation responce: ')
-
+time.sleep(1)
 pinPacket = PinPacket(
 	header = PinHeader.IN_PIN,							# write to  pin.
 	pin_id = PIN_ID,
 	value = 1)											# set pin HIGH.
-ArduinoUnoSerial.write(pinPacket.to_bytearray())  		# send set pin HIGH cmd.
 
-uc.send_packet(pinConfigPacket) # send pin write.
-
+uc.send_packet(pinPacket) # send pin write.
+time.sleep(1)
 if uc.has_packet():
     print('> pin wriute request responce: {}'.format(str(uc.read_packet())))
 else:
@@ -94,10 +95,9 @@ pinPacket = PinPacket(
 	header = PinHeader.IN_PIN_READ,							# read from pin.
 	pin_id = PIN_ID,
 	value = 0)											
-ArduinoUnoSerial.write(pinPacket.to_bytearray())  		# send  cmd.
 
 uc.send_packet(pinPacket) # send pin read.
-
+time.sleep(1)
 if uc.has_packet():
     print('> pin state: {}'.format(str(uc.read_packet())))
 else:
@@ -109,4 +109,4 @@ else:
     print('> [error] no pin read confirmation responce: ')
 
 # close port.
-ArduinoUnoSerial.close()
+uc.close_connection()

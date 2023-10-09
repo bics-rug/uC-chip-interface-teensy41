@@ -140,6 +140,9 @@ void configure_pin(uint8_t instruction, uint8_t data){
     send_config(IN_CONF_PIN,instruction,data);
 }
 
+/**
+ * 
+*/
 void set_pin(uint8_t id, uint32_t data){
   if (output_pin_active[id]){
       if (data) {
@@ -165,6 +168,13 @@ void read_pin(uint8_t id){
   else{
     error_message(OUT_ERROR_PIN_NOT_CONFIGURED,IN_PIN_READ,id);
   }
+}
+
+void debug_pin(uint8_t id, uint8_t value){
+  if (reserve_output_pin(id)){
+        pinMode(id, OUTPUT);
+        digitalWrite(id, value);
+      }
 }
 
 //@TODO move to Interface_pin

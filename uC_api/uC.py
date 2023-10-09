@@ -19,13 +19,13 @@
 import logging
 import threading
 import serial
-from packet import *
-from header import *
+from .packet import *
+from .header import *
 from time import sleep
-from pin import PIN
-from i2c import I2C
-from spi import SPI
-from async_interface import Async_interface
+from .interface_pin import Interface_PIN
+from .interface_i2c import Interface_I2C
+from .interface_spi import Interface_SPI
+from .interface_async import Interface_Async
 from queue import Queue
 
 class uC_api:
@@ -42,17 +42,18 @@ class uC_api:
         self.__api_level = api_level
         if api_level == 2:
             self.errors = []
-            self.spi = [SPI(self,0), SPI(self,1), SPI(self,2)]
-            self.i2c = [I2C(self,0), I2C(self,1), I2C(self,2)]
+            self.spi = [Interface_SPI(self,0), Interface_SPI(self,1), Interface_SPI(self,2)]
+            self.i2c = [Interface_I2C(self,0), Interface_I2C(self,1), Interface_I2C(self,2)]
             self.pin = []
             for pin_id in range(55):
-                self.pin.append(PIN(self,pin_id))
+                self.pin.append(Interface_PIN(self,pin_id))
             self.async_to_chip = []
             for async_id in range(8):
-                self.async_to_chip.append(Async_interface(self,async_id,"TO_CHIP"))
+                self.async_to_chip.append(Interface_Async(self,async_id,"TO_CHIP"))
             self.async_from_chip = []
             for async_id in range(8):
-                self.async_from_chip.append(Async_interface(self,async_id,"FROM_CHIP"))
+                self.async_from_chip.append(Interface_Async(self,async_id,"FROM_CHIP"))
+        self.__communication_thread.start()
 
     def update_state(self):
         while not self.__read_buffer.empty():
@@ -61,19 +62,32 @@ class uC_api:
                 header_for_sorting = packet_to_process.original_header()
             else:
                 header_for_sorting = packet_to_process.header()
-
+            no_match = True
             if header_for_sorting == Data32bitHeader.IN_SET_TIME:
                 self.experiment_state.append(packet_to_process.value())
                 self.experiment_state_timestamp.append(packet_to_process.time())
+                no_match = False
                 continue
             
-            for interface in async_to_chip + async_from_chip + spi + pin + i2c:
-                if header_for_sorting in interface.__header:
+            for interface in self.async_to_chip + self.async_from_chip + self.spi + self.i2c:
+                if header_for_sorting in interface.header():
                     interface.process_packet(packet_to_process)
                     self.__read_buffer.task_done()
+                    no_match = False
                     break
-            self.errors.append(str(packet_to_process))
-            self.__read_buffer.task_done()
+            if header_for_sorting == self.pin[0].header()[0]:
+                    self.pin[packet_to_process.value()].process_packet(packet_to_process)
+                    self.__read_buffer.task_done()
+                    no_match = False
+                    continue
+            elif header_for_sorting in self.pin[0].header():
+                    self.pin[packet_to_process.pin_id()].process_packet(packet_to_process)
+                    self.__read_buffer.task_done()
+                    no_match = False
+                    continue
+            if no_match:
+                self.errors.append(str(packet_to_process))
+                self.__read_buffer.task_done()
 
     def start_experiment(self):
         packet_to_send = Data32bitPacket(header=Data32bitHeader.IN_SET_TIME,value=1)
@@ -104,9 +118,16 @@ class uC_api:
 
     def has_packet(self):
         if self.__api_level == 1:
-            return self.__read_buffer.empty()
+            return (self.__read_buffer.empty() == False)
         else:
             logging.error("reading raw packets is only availible in API level 1")
+
+    #def print_all_errors(self):
+
+    def close_connection(self):
+        self.__write_buffer.put(Data32bitPacket(Data32bitHeader.UC_CLOSE_CONNECTION))
+        self.__communication_thread.join()
+
 
     def __thread_function(self):
         idle_write_pc = False
@@ -117,31 +138,38 @@ class uC_api:
                 idle_write_pc = False
                 if not self.__write_buffer.empty():
                     data_packet = self.__write_buffer.get()
+                    if data_packet.header() == Data32bitHeader.UC_CLOSE_CONNECTION:
+                        self.__connection.close()
+                        return
                     self.__connection.write(data_packet.to_bytearray())
+                    logging.debug("send instant: "+str(data_packet))
                     self.__write_buffer.task_done()
                 else:
                     if self.__free_input_queue_spots_on_uc > 0 :
                         data_packet = self.__write_buffer_timed.get()
                         self.__free_input_queue_spots_on_uc -= 1
                         self.__connection.write(data_packet.to_bytearray())
+                        logging.debug("send timed: "+str(data_packet))
                         self.__write_buffer_timed.task_done()
                     else:
                         idle_write_uc += 1
                         if idle_write_uc%2000 == 1:
                             packet_to_send = Data32bitPacket(Data32bitHeader.IN_FREE_INSTRUCTION_SPOTS)
-                            self.send_packet(packet_to_send)
+                            self.__connection.write(packet_to_send.to_bytearray())
+                            logging.debug("send timed: "+str(packet_to_send))
             else:
                 idle_write_pc = True
 
             if self.__connection.in_waiting >= 9:
                 idle_read = False
-                byte_packet = ArduinoUnoSerial.read(size = 9)
-                read_packet = Packet.from_bytearray(packetRead)
-                if read_packet.__header is Data32bitHeader.OUT_FREE_INSTRUCTION_SPOTS:
-                    self.__free_input_queue_spots_on_uc = read_packet.__value
+                byte_packet = self.__connection.read(size = 9)
+                read_packet = Packet.from_bytearray(byte_packet)
+                logging.debug("read: "+str(read_packet))
+                if read_packet.header() is Data32bitHeader.OUT_FREE_INSTRUCTION_SPOTS:
+                    self.__free_input_queue_spots_on_uc = read_packet.value()
                     idle_write_uc = 0
                 else:
-                    self.__read_buffer.put(packet)
+                    self.__read_buffer.put(read_packet)
             else:
                 idle_read = True
             

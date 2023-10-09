@@ -71,7 +71,7 @@ class AER_from_chip {
     // Class constructor; initialises the AER_from_chip object and sets up the relevant pins on Teensy
     //-----------------------------------------------------------------------------------------------------------------------------------
     AER_from_chip(uint8_t id, uint8_t reqPin, uint8_t ackPin, volatile uint8_t dataPins[], uint8_t numDataPins, uint8_t delay = 0, 
-                bool activeLow = false, bool dataActiveLow = false);
+                bool activeLow = false, bool dataActiveLow = false, uint8_t type=ASYNC_4Phase_Chigh_Dhigh);
 
 
     //----------------------------------------------------------------------------------------------------------------------------------
@@ -113,6 +113,7 @@ class AER_from_chip {
     bool _handshakeActiveLow;
     bool _dataActiveLow;
     uint8_t _id;
+    uint8_t _type;
 
 };
 
