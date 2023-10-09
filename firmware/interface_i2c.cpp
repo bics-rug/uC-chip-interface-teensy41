@@ -176,6 +176,7 @@ Interface_i2c::Interface_i2c(uint8_t id, uint32_t frequency) {
 }
 
 void Interface_i2c::write(uint8_t device_address, uint8_t register_address, uint8_t data_ls, uint8_t data_ms) volatile {
+  uint8_t result = 0;
   if (_i2c != NULL){
     noInterrupts();
     _i2c->beginTransmission(device_address);
@@ -183,8 +184,15 @@ void Interface_i2c::write(uint8_t device_address, uint8_t register_address, uint
     if (Interface_i2c::width[_id] == 2 && Interface_i2c::byte_order[_id]) _i2c->write(data_ms);
     _i2c->write(data_ls);
     if (Interface_i2c::width[_id] == 2 && !Interface_i2c::byte_order[_id]) _i2c->write(data_ms);
-    _i2c->endTransmission(true);
+    result = _i2c->endTransmission(true);
     interrupts();
+    if(result>0){
+          switch (_id){
+              case 0: error_message(OUT_ERROR_PERIPHERAL_INTERFACE_NOT_READY,IN_I2C0,result); break;
+              case 1: error_message(OUT_ERROR_PERIPHERAL_INTERFACE_NOT_READY,IN_I2C1,result); break;
+              case 2: error_message(OUT_ERROR_PERIPHERAL_INTERFACE_NOT_READY,IN_I2C2,result); break;
+            }
+        }
     switch (_id){
       case 0: send_data_i2c(IN_I2C0,device_address<<1,register_address,data_ls,data_ms); break;
       case 1: send_data_i2c(IN_I2C1,device_address<<1,register_address,data_ls,data_ms); break;
@@ -199,6 +207,7 @@ void Interface_i2c::write(uint8_t device_address, uint8_t register_address, uint
 }
 
 void Interface_i2c::read(uint8_t device_address, uint8_t register_address, uint8_t number_of_bytes) volatile{
+  uint8_t result = 0;
   if (number_of_bytes > 32) {
     switch (_id){
       default:
@@ -214,11 +223,25 @@ void Interface_i2c::read(uint8_t device_address, uint8_t register_address, uint8
       if (byte_mulitply != 0) {
       _i2c->beginTransmission(device_address);
       _i2c->write(register_address);
-      _i2c->endTransmission(false);
+      result = _i2c->endTransmission(false);
+      if(result>0){
+          switch (_id){
+              case 0: error_message(OUT_ERROR_PERIPHERAL_INTERFACE_NOT_READY,IN_I2C0,result); break;
+              case 1: error_message(OUT_ERROR_PERIPHERAL_INTERFACE_NOT_READY,IN_I2C1,result); break;
+              case 2: error_message(OUT_ERROR_PERIPHERAL_INTERFACE_NOT_READY,IN_I2C2,result); break;
+            }
+        } 
       }
       else byte_mulitply = 1;
-      _i2c->requestFrom(device_address,number_of_bytes*byte_mulitply,true);
+      result = _i2c->requestFrom(device_address,number_of_bytes*byte_mulitply,true);
       interrupts();
+      if(result!=byte_mulitply){
+          switch (_id){
+              case 0: error_message(OUT_ERROR_PERIPHERAL_INTERFACE_NOT_READY,IN_I2C0,0); break;
+              case 1: error_message(OUT_ERROR_PERIPHERAL_INTERFACE_NOT_READY,IN_I2C1,0); break;
+              case 2: error_message(OUT_ERROR_PERIPHERAL_INTERFACE_NOT_READY,IN_I2C2,0); break;
+            }
+        }
       if (_i2c->available() == number_of_bytes*byte_mulitply) {
         uint8_t position = 0;
         for (position = 0; position < number_of_bytes; position++){
@@ -252,17 +275,32 @@ void Interface_i2c::read(uint8_t device_address, uint8_t register_address, uint8
 
 uint16_t Interface_i2c::read_return(uint8_t device_address, uint8_t register_address) volatile{
   uint16_t data = 0;
+  uint8_t result = 0;
   if (_i2c != NULL){
       noInterrupts();
       uint8_t byte_mulitply = Interface_i2c::width[_id];
       if (byte_mulitply != 0) {
-      _i2c->beginTransmission(device_address);
-      _i2c->write(register_address);
-      _i2c->endTransmission(false);
+        _i2c->beginTransmission(device_address);
+        _i2c->write(register_address);
+        result = _i2c->endTransmission(false);
+        if(result>0){
+          switch (_id){
+              case 0: error_message(OUT_ERROR_PERIPHERAL_INTERFACE_NOT_READY,IN_I2C0,result); break;
+              case 1: error_message(OUT_ERROR_PERIPHERAL_INTERFACE_NOT_READY,IN_I2C1,result); break;
+              case 2: error_message(OUT_ERROR_PERIPHERAL_INTERFACE_NOT_READY,IN_I2C2,result); break;
+            }
+        } 
       }
       else byte_mulitply = 1;
-      _i2c->requestFrom(device_address,byte_mulitply,true);
+      result = _i2c->requestFrom(device_address,byte_mulitply,true);
       interrupts();
+      if(result!=byte_mulitply){
+          switch (_id){
+              case 0: error_message(OUT_ERROR_PERIPHERAL_INTERFACE_NOT_READY,IN_I2C0,0); break;
+              case 1: error_message(OUT_ERROR_PERIPHERAL_INTERFACE_NOT_READY,IN_I2C1,0); break;
+              case 2: error_message(OUT_ERROR_PERIPHERAL_INTERFACE_NOT_READY,IN_I2C2,0); break;
+            }
+        }
       if (_i2c->available() == byte_mulitply) {
         if (byte_mulitply == 2 && !Interface_i2c::byte_order[_id]){
           data = _i2c->read();

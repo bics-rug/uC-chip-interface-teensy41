@@ -19,6 +19,7 @@
 #include <Arduino.h>
 #include "interface_AER_from_chip.h"
 #include "misc_functions.h"
+#include "interface_i2c.h"
 
 
 // reserve and clear the memory of the static global variables.
@@ -44,14 +45,14 @@ void AER_from_chip::configure(uint8_t id, uint8_t config, uint8_t data){
   }
   uint8_t interface;
   switch(id){
-    case 0: interface = IN_ASYNC_TO_CHIP0; break;
-    case 1: interface = IN_ASYNC_TO_CHIP1; break;
-    case 2: interface = IN_ASYNC_TO_CHIP2; break;
-    case 3: interface = IN_ASYNC_TO_CHIP3; break;
-    case 4: interface = IN_ASYNC_TO_CHIP4; break;
-    case 5: interface = IN_ASYNC_TO_CHIP5; break;
-    case 6: interface = IN_ASYNC_TO_CHIP6; break;
-    case 7: interface = IN_ASYNC_TO_CHIP7; break;
+    case 0: interface = IN_CONF_ASYNC_FROM_CHIP0; break;
+    case 1: interface = IN_CONF_ASYNC_FROM_CHIP1; break;
+    case 2: interface = IN_CONF_ASYNC_FROM_CHIP2; break;
+    case 3: interface = IN_CONF_ASYNC_FROM_CHIP3; break;
+    case 4: interface = IN_CONF_ASYNC_FROM_CHIP4; break;
+    case 5: interface = IN_CONF_ASYNC_FROM_CHIP5; break;
+    case 6: interface = IN_CONF_ASYNC_FROM_CHIP6; break;
+    case 7: interface = IN_CONF_ASYNC_FROM_CHIP7; break;
     default:interface = OUT_ERROR; break;
   }
   // handle the different config sub headers
@@ -74,7 +75,7 @@ void AER_from_chip::configure(uint8_t id, uint8_t config, uint8_t data){
     // configure the type (done via class switching for speed!)
     case CONF_TYPE:
       // replace by class
-      if (data = ASYNC_4Phase_Clow_Dhigh) AER_from_chip::hs_lowactive[id]=1;
+      if (data == ASYNC_4Phase_Clow_Dhigh) AER_from_chip::hs_lowactive[id]=1;
       AER_from_chip::type[id] = data;
       break;
     // configure the location of the request pin
@@ -95,7 +96,9 @@ void AER_from_chip::configure(uint8_t id, uint8_t config, uint8_t data){
         send_config(interface,config,32);
         return;
       }
-      else AER_from_chip::data_width[id] = data;
+      else {
+        AER_from_chip::data_width[id] = data;
+      }
       break;
     // configure the delay on the req line
     case CONF_REQ_DELAY:
@@ -121,12 +124,13 @@ void AER_from_chip::configure(uint8_t id, uint8_t config, uint8_t data){
 // AER_from_chip constructor
 //---------------------------------------------------------------------------------------------------------------------------------------
 
-AER_from_chip::AER_from_chip(uint8_t id, uint8_t reqPin, uint8_t ackPin, volatile uint8_t dataPins[], uint8_t numDataPins, uint8_t delay, bool handshakeActiveLow, bool dataActiveLow) {
+AER_from_chip::AER_from_chip(uint8_t id, uint8_t reqPin, uint8_t ackPin, volatile uint8_t dataPins[], uint8_t numDataPins, uint8_t delay, bool handshakeActiveLow, bool dataActiveLow, uint8_t type) {
   _reqPin = reqPin;
   _ackPin = ackPin;
   _dataPins = dataPins;
   _numDataPins = numDataPins;
   _delay = delay;
+  _type = type;
   _handshakeActiveLow = handshakeActiveLow;
   _dataActiveLow = dataActiveLow;
   _id = id;
@@ -252,16 +256,24 @@ void AER_from_chip::handshake() {
 //----------------------------------------------------------------------------------------------------------------------------------
 
 bool AER_from_chip::setupPins() {
-if (reserve_input_pin(_reqPin)) pinMode(_reqPin, INPUT);
-else return false;
-if (reserve_output_pin(_ackPin)) pinMode(_ackPin, OUTPUT);
-else return false;
-
-  for(int i = 0; i < _numDataPins; i++) {
-    if (reserve_input_pin(_dataPins[i])) pinMode(_dataPins[i], INPUT);
-    else return false;
+  if (reserve_input_pin(_reqPin)) pinMode(_reqPin, INPUT);
+  else return false;
+  if (reserve_output_pin(_ackPin)) pinMode(_ackPin, OUTPUT);
+  else return false;
+  if (_type == ASYNC_4Phase_MCP23017){
+    if (!Interface_i2c::active[0]) {
+      Interface_i2c::configure(0,CONF_BYTE_ORDER,0U);
+      Interface_i2c::configure(0,CONF_WIDTH,2U);
+      Interface_i2c::inst[0] = new Interface_i2c(0,400000U);
+    } else return false;
   }
-  return true;
+  else {
+    for(int i = 0; i < _numDataPins; i++) {
+      if (reserve_input_pin(_dataPins[i])) pinMode(_dataPins[i], INPUT);
+      else return false;
+    }
+    return true;
+  }
 }
 
 
@@ -274,18 +286,25 @@ uint32_t AER_from_chip::getData() volatile{
   if (_delay) {
     delay20ns(_delay);
   }
-  for (int i = 0; i < _numDataPins; i++) {
-    #if defined(TEENSYDUINO)
-    data |= digitalReadFast(_dataPins[i]) << i; // @todo read with direct pin access
-    #else
-    data |= digitalRead(_dataPins[i]) << i;
-    #endif
-  }
-  if (_dataActiveLow) {
-    return ~data;
-  }
-  else {
+  if (_type == ASYNC_4Phase_MCP23017){
+    data = Interface_i2c::inst[0]->read_return(32U,18U);
+    data |= (Interface_i2c::inst[0]->read_return(33U,18U)<<16);
     return data;
+  }
+  else{
+    for (int i = 0; i < _numDataPins; i++) {
+      #if defined(TEENSYDUINO)
+      data |= digitalReadFast(_dataPins[i]) << i; // @todo read with direct pin access
+      #else
+      data |= digitalRead(_dataPins[i]) << i;
+      #endif
+    }
+    if (_dataActiveLow) {
+      return ~data;
+    }
+    else {
+      return data;
+    }
   }
 }
 

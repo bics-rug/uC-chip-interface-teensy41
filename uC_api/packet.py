@@ -18,7 +18,7 @@
 
 import logging
 import struct
-from header import *
+from .header import *
 
 
 class Packet:
@@ -36,27 +36,27 @@ class Packet:
             """
             try:
                 header = Data32bitHeader(unpacked[0]);
-                logging.info("Read: Data32bit : "+ str(header))
+                logging.debug("detected: Data32bit : "+ str(header))
                 return Data32bitPacket.from_bytearray(byte_array)
             except ValueError:
                 try:
                     header = DataI2CHeader(unpacked[0]);
-                    logging.info("Read: Data8bit : "+ str(header))
+                    logging.debug("detected: DataI2C : "+ str(header))
                     return DataI2CPacket.from_bytearray(byte_array)
                 except ValueError:
                     try:
                         header = PinHeader(unpacked[0]);
-                        logging.info("Read: Pin : "+ str(header))
+                        logging.debug("detected: Pin : "+ str(header))
                         return PinPacket.from_bytearray(byte_array)
                     except ValueError:
                         try:
                             header = ConfigMainHeader(unpacked[0]);
-                            logging.info("Read: ConfigMain : "+ str(header))
+                            logging.debug("detected: Config Main : "+ str(header))
                             return ConfigPacket.from_bytearray(byte_array)
                         except ValueError:
                             try:
                                 header = ErrorHeader(unpacked[0]);
-                                logging.info("Read: Error : "+ str(header))
+                                logging.debug("detected: Error : "+ str(header))
                                 return ErrorPacket.from_bytearray(byte_array)
                             except ValueError:
                                 logging.error("Header "+ str(unpacked[0]) +" is not a valid header, Packet:" + str(byte_array) +" "+ str(unpacked[0]) +" "+ str(unpacked[1]) +" "+ str(unpacked[2]))
@@ -126,12 +126,24 @@ class DataI2CPacket(Packet):
         self.set_header(header)
         self.set_value(value)
         self.set_exec_time(time)
+        self.set_device_address(device_address)
+        self.set_register_address(register_address)
+        self.set_read(read)
 
     def value(self):
-        return self._value
+        return self._value_ls+ self._value_ms<<8
+
+    def read(self):
+        return self._read
+    
+    def device_address(self):
+        return self._device_address
+
+    def register_address(self):
+        return self._register_address
 
     def set_header(self, header):
-        if (header in Data8bitHeader):
+        if (header in DataI2CHeader):
             self._header=header
         else:
             logging.error("header "+str(header)+" is not a valid header")
@@ -145,7 +157,7 @@ class DataI2CPacket(Packet):
 
     def set_device_address(self, value):
         if (value < 2**7 and value >= 0 and isinstance(value, int)):
-            self._device_address = device_address
+            self._device_address = value
         else:
             logging.error("device_address "+str(value)+" is not a valid unsigned integer of 7 bit")
 
@@ -156,7 +168,7 @@ class DataI2CPacket(Packet):
                 self._read = 0
     def set_register_address(self, value):
         if (value < 2**8 and value >= 0 and isinstance(value, int)):
-            self._register_address = device_address
+            self._register_address = value
         else:
             logging.error("register_address "+str(value)+" is not a valid unsigned integer of 8 bit")
     def to_bytearray(self):
@@ -282,11 +294,6 @@ class ConfigPacket(Packet):
         except Exception as e:
             return str(e) + ' (error)'
 
-    def from_bytearray(self, byteArray):
-        try:
-            return struct.unpack("<BII", byteArray)
-        except Exception as e:
-            return str(e) + ' (error)'
 
 class ErrorPacket(Packet): 
 
@@ -302,7 +309,7 @@ class ErrorPacket(Packet):
         return self._value
 
     def original_header(self):
-        return self._original_header
+        return self._org_header
 
     def set_header(self, header):
         if (header in ErrorHeader):

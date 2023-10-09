@@ -33,7 +33,7 @@ enum Async_from_chip_types : uint8_t {
     AER_MCP23017 = 2U,
 };
 
-class Async_from_chip {
+class Async {
     /*
         the AER_from_chip class handles the flexible and runtime assignable 4 phase handshake protocols for reciving data with the uC.
         all the configuration is static and the moment the interface is activated an instance of this class is created and the 
@@ -112,6 +112,33 @@ class Async_from_chip {
     uint8_t _id;
 
 };
+
+class Async_to_chip : Async
+{
+private:
+    /* data */
+public:
+    interface_async(/* args */);
+    ~interface_async();
+};
+
+class Async_from_chip : Async
+{
+private:
+    /* data */
+public:
+    interface_async(/* args */);
+    ~interface_async();
+};
+
+interface_async::interface_async(/* args */)
+{
+}
+
+interface_async::~interface_async()
+{
+}
+
 
 
 

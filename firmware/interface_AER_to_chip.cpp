@@ -38,14 +38,14 @@ void AER_to_chip::configure(uint8_t id, uint8_t config, uint8_t data){
 
   uint8_t interface;
   switch(id){
-    case 0: interface = IN_ASYNC_TO_CHIP0; break;
-    case 1: interface = IN_ASYNC_TO_CHIP1; break;
-    case 2: interface = IN_ASYNC_TO_CHIP2; break;
-    case 3: interface = IN_ASYNC_TO_CHIP3; break;
-    case 4: interface = IN_ASYNC_TO_CHIP4; break;
-    case 5: interface = IN_ASYNC_TO_CHIP5; break;
-    case 6: interface = IN_ASYNC_TO_CHIP6; break;
-    case 7: interface = IN_ASYNC_TO_CHIP7; break;
+    case 0: interface = IN_CONF_ASYNC_TO_CHIP0; break;
+    case 1: interface = IN_CONF_ASYNC_TO_CHIP1; break;
+    case 2: interface = IN_CONF_ASYNC_TO_CHIP2; break;
+    case 3: interface = IN_CONF_ASYNC_TO_CHIP3; break;
+    case 4: interface = IN_CONF_ASYNC_TO_CHIP4; break;
+    case 5: interface = IN_CONF_ASYNC_TO_CHIP5; break;
+    case 6: interface = IN_CONF_ASYNC_TO_CHIP6; break;
+    case 7: interface = IN_CONF_ASYNC_TO_CHIP7; break;
     default:interface = OUT_ERROR; break;
   }
 
@@ -67,7 +67,6 @@ void AER_to_chip::configure(uint8_t id, uint8_t config, uint8_t data){
     case CONF_REQ:
       AER_to_chip::req_pin[id] = data;
       // send confirmation
-        send_config(interface,config,data);
       break;
     case CONF_ACK:
       AER_to_chip::ack_pin[id] = data;
@@ -80,14 +79,16 @@ void AER_to_chip::configure(uint8_t id, uint8_t config, uint8_t data){
         send_config(interface,config,32);
         return;
       }
-      else AER_to_chip::data_width[id] = data;
+      else {
+        AER_to_chip::data_width[id] = data;
+      }
       break;
     case CONF_REQ_DELAY:
       AER_to_chip::req_delay[id] = data;
       break;
     case CONF_TYPE:
       // replace by class
-      if (data = ASYNC_4Phase_Clow_Dhigh) AER_to_chip::hs_lowactive[id]=1;
+      if (data == ASYNC_4Phase_Clow_Dhigh) AER_to_chip::hs_lowactive[id]=1;
       AER_to_chip::type[id] = data;
       break;
     default:

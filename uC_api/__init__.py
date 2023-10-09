@@ -1,7 +1,7 @@
-from uC import *
-import header
-import packet
-import aer
-import pin
-import spi
-import i2c
+from .uC import *
+import .header
+import .packet
+import .interface_async
+import .interface_pin
+import .interface_spi
+import .interface_i2c
