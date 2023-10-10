@@ -162,8 +162,14 @@ class Interface_Async:
                     """@todo replace with type"""  
                     if packet.value() == 0:
                         self.__mode = "4Phase_Chigh_Dhigh"
-                    else:
+                    elif packet.value() == 1:
                         self.__mode = "4Phase_Clow_Dhigh"
+                    elif packet.value() == 10:
+                        self.__mode = "2Phase"
+                    elif packet.value() == 20:
+                        self.__mode = "4Phase_MCP23017"
+                    else:
+                        logging.error("unknown async type returned")
                     self.__mode_timestamp = packet.time()
                     return
                 elif packet.config_header() == ConfigSubHeader.CONF_ACK:
@@ -215,6 +221,9 @@ class Interface_Async:
             elif mode == "2Phase_Clow_Dhigh":
                 logging.warning("pin mode not implmented yet")
                 return
+            elif mode == "4Phase_MCP23017":
+                self.__api.send_packet(ConfigPacket(header = self.__header[0], config_header = ConfigSubHeader.CONF_TYPE, value = 20, time = time))
+                self.__status = 1
             else:
                 logging.error("pin.activate got wrong type "+str(pin_mode)+" only 4Phase_Chigh_Dhigh, 4Phase_Clow_Dhigh, 2Phase_Chigh_Dhigh, 2Phase_Clow_Dhigh are allowed, more modes implemted on request")
                 return

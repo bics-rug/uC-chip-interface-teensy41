@@ -66,7 +66,8 @@ void AER_from_chip::configure(uint8_t id, uint8_t config, uint8_t data){
                                       AER_from_chip::data_width[id],
                                       AER_from_chip::req_delay[id],
                                       AER_from_chip::hs_lowactive[id],
-                                      AER_from_chip::data_lowactive[id]); 
+                                      AER_from_chip::data_lowactive[id],
+                                      AER_from_chip::type[id]);
       if (AER_from_chip::active[id]){
         // send confirmation
         send_config(interface,config,AER_from_chip::active[id]);
