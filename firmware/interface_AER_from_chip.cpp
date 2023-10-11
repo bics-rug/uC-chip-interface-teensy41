@@ -20,7 +20,7 @@
 #include "interface_AER_from_chip.h"
 #include "misc_functions.h"
 #include "interface_i2c.h"
-
+#include <Wire.h>
 
 // reserve and clear the memory of the static global variables.
 // see header for description
@@ -79,14 +79,14 @@ void AER_from_chip::configure(uint8_t id, uint8_t config, uint8_t data){
       if (data == ASYNC_4Phase_Clow_Dhigh) AER_from_chip::hs_lowactive[id]=1;
       AER_from_chip::type[id] = data;
       if (data == ASYNC_4Phase_MCP23017){
-        if (!Interface_i2c::active[0]) {
-          Interface_i2c::configure(0,CONF_BYTE_ORDER,0U);
-          Interface_i2c::configure(0,CONF_WIDTH,2U);
-          Interface_i2c::inst[0] = new Interface_i2c(0,400000U);
-        } else {
-          error_message(OUT_ERROR_INTERFACE_ALREADY_ACTIVE,IN_CONF_I2C0,0,interface);
-          return false;
-        } 
+        // if (!Interface_i2c::active[0]) {
+        //   Interface_i2c::configure(0,CONF_BYTE_ORDER,0U);
+        //   Interface_i2c::configure(0,CONF_WIDTH,2U);
+        //   Interface_i2c::inst[0] = new Interface_i2c(0,100000U);
+        // } else {
+        //   error_message(OUT_ERROR_INTERFACE_ALREADY_ACTIVE,IN_CONF_I2C0,0,interface);
+        //   return;
+        // } 
       }
       break;
     // configure the location of the request pin
@@ -272,12 +272,9 @@ bool AER_from_chip::setupPins() {
   if (reserve_output_pin(_ackPin)) pinMode(_ackPin, OUTPUT);
   else return false;
   if (_type == ASYNC_4Phase_MCP23017){
-    if (Interface_i2c::active[0]) {
-      return true;
-    } else {
-      error_message(OUT_ERROR_PERIPHERAL_INTERFACE_NOT_READY,IN_CONF_I2C0,0,IN_CONF_ASYNC_FROM_CHIP0);
-      return false;
-    } 
+    Wire.begin();
+    Wire.setClock(400000);
+    return true;
   }
   else {
     for(int i = 0; i < _numDataPins; i++) {
@@ -299,10 +296,31 @@ uint32_t AER_from_chip::getData() volatile{
     delay20ns(_delay);
   }
   if (_type == ASYNC_4Phase_MCP23017){
-    data = Interface_i2c::inst[0]->read_return(32U,18U);
-    data |= (Interface_i2c::inst[0]->read_return(33U,18U)<<16);
-    return data;
+      uint8_t count_shift = 0;
+  Wire.beginTransmission((uint8_t) 32U);
+  Wire.write((uint8_t) 18U);
+  Wire.endTransmission();
+
+  Wire.requestFrom((uint8_t) 32U,2,true);
+  while (Wire.available()>0){
+    data |= Wire.read()<<8*count_shift;
+    count_shift++;
   }
+  Wire.beginTransmission((uint8_t) 33U);
+  Wire.write((uint8_t) 18U);
+  Wire.endTransmission(false);
+  Wire.requestFrom((uint8_t) 33U,2,true);
+  while (Wire.available()>0){
+    data |= Wire.read()<<8*count_shift;
+    count_shift++;
+  }
+  
+    // data = Interface_i2c::inst[0]->read_return(32U,18U);
+    // data |= (Interface_i2c::inst[0]->read_return(33U,18U)<<16);
+    return data;
+
+  }
+
   else{
     for (int i = 0; i < _numDataPins; i++) {
       #if defined(TEENSYDUINO)

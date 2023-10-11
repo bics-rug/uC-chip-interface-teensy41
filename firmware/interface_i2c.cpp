@@ -282,7 +282,7 @@ uint16_t Interface_i2c::read_return(uint8_t device_address, uint8_t register_add
       if (byte_mulitply != 0) {
         _i2c->beginTransmission(device_address);
         _i2c->write(register_address);
-        result = _i2c->endTransmission(false);
+        result = _i2c->endTransmission();
         if(result>0){
           switch (_id){
               case 0: error_message(OUT_ERROR_PERIPHERAL_INTERFACE_NOT_READY,IN_I2C0,result); break;
