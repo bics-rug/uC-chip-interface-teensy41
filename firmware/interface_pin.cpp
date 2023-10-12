@@ -161,7 +161,8 @@ void set_pin(uint8_t id, uint32_t data){
 void read_pin(uint8_t id){
   if (output_pin_active[id] || input_pin_active[id]){
       uint8_t data = digitalRead(id);
-      send_pin(OUT_PIN, id, data);
+      if (data) send_pin(OUT_PIN_HIGH, id, data);
+      else send_pin(OUT_PIN_LOW, id, data);
       // send confirmation
       send_pin(IN_PIN_READ,id,0,true);
   }
@@ -177,13 +178,14 @@ void debug_pin(uint8_t id, uint8_t value){
       }
 }
 
-//@TODO move to Interface_pin
 void pin_ISR(uint8_t id) {
   #if defined(ARDUINO_TEENSY41)
-  send_pin(OUT_PIN,id,digitalReadFast(id));
+  uint8_t data = digitalReadFast(id);
   #else
-  send_pin(OUT_PIN,id,digitalRead(id));
+  uint8_t data = digitalRead(id);
   #endif
+  if (data) send_pin(OUT_PIN_HIGH, id, data);
+  else send_pin(OUT_PIN_LOW, id, data);
 }
 
 void pin_ISR0() { pin_ISR(0); }

@@ -1,32 +1,41 @@
-"""
-    This file is part of the Firmware project to interface with small Async or Neuromorphic chips
-    Copyright (C) 2023 Ole Richter - University of Groningen
 
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+#    This file is part of the Firmware project to interface with small Async or Neuromorphic chips
+#    Copyright (C) 2023 Ole Richter - University of Groningen
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <https://www.gnu.org/licenses/>.
-"""
 
 from .header import ConfigMainHeader, Data32bitHeader, ConfigSubHeader
 from .packet import ConfigPacket, Data32bitPacket
 import logging
 
 class Interface_SPI:
+    """ The interface SPI creates and object though which the interface can be accessed
+
+    the pins on the uC are fixed and depend on the specific uC model, please consult the pin out diagram of you uC
+
+    to read out the state use the object funtions to get the state returned, this is done so an state ubdate can be triggered before returning the values
+    """
     def __init__(self, api_object, interface_id):
-        """ 0 means not activated
-            1 means activation pending
-            2 means activted
-            -1 means error
+        """__init__ creates a not activate interface object
+
+        :param api_object: the parent manageing the conection to the uC
+        :type api_object: uC_api
+        :param interface_id: the identifier of the interface, so the interface number in the hardware it is usulay depiced after the port name like 0 -> SCK, COPI, CIPO; 1-> SCK1, COPI1, CIPO1 and so on;
+        :type interface_id: int
         """
+
         self.__status = 0
         self.__status_timestamp = 0
         self.__mode = "NONE"
@@ -53,42 +62,123 @@ class Interface_SPI:
             logging.error("SPI only up to 3 interfaces are supported at the moment")
 
     def header(self):
+        """header returns the packet headers associated whith this interface
+
+        :return: packet headers of this interface
+        :rtype: Header (IntEnum)
+        """
         return self.__header
 
     def status(self):
+        """status returns the state of this interface,
+
+        it can be:
+         - active - everything is working fine
+         - activation pending - the uC has not acknolaged the activation yet after the request to activate the interface
+         - not active - the interface has not been configured and activate
+         - error - there was an error during activation or during use, please consult the errors using the errors function
+
+        :return: the state of the interface and the timestamp in us
+        :rtype: (string, int)
+        """
         self.update()
         state_str = ("active" if self.__status == 2 else ("activation pending" if self.__status == 1 else ("not active" if self.__status == 0 else "error" )))
         return (state_str,self.__status_timestamp)
     
     def interface_mode(self):
+        """interface_mode the currently active mode, consult spi arduino docs for more information
+
+        spi has 4 modes which are numbered SPI_MODE0 ...
+
+        :return: the mode and the timestamp in us as touple
+        :rtype: (string, int)
+        """
         self.update()
         return (self.__mode,self.__mode_timestamp)
 
     def speed(self):
+        """speed the speed class result of the current
+
+        :return: the frequency and the timestamp in us
+        :rtype: (int, int)
+        """
         self.update()
         return (self.__speed,self.__speed_timestamp)
 
     def bit_order(self):
+        """bit_order the bit order in which the word is send
+
+        :return: the active bitorder and the timestamp in us
+        :rtype: (string, int)
+        """
         self.update()
         return (self.__order,self.__order_timestamp)
 
     def number_of_bytes():
+        """number_of_bytes the width of each send word, it can be 1,2,3 or 4 bytes
+
+        :return: the wisth of each word and the timestamp in us
+        :rtype: (int, int)
+        """
         self.update()
         return (self.__number_of_bytes,self.__number_of_bytes_timestamp)
 
     def data_from_chip(self):
+        """data_from_chip will retun the data recoded by the uC send from the device under test (DUT)
+
+        will retun 2 lists: one with the word recoded and one with the time when it was recorded, linked by index
+
+        :return: the words from the DUT and the times of those words
+        :rtype: ([int],[int])
+        """
         self.update()
         return (self.__data_from_chip, data_from_chip_times)
     
     def data_to_chip(self):
+        """data_to_chip will retun the data send by the uC to the device under test (DUT)
+
+        will retun 2 lists: one with the word send and one with the exact time when it was send, linked by index
+
+        the time might differ slightly from the time you sheduled the send word, 
+        as it is the time when it was send out and the uC can only send one word at a time
+
+        :return: the words send to the DUT and the times of those words
+        :rtype: ([int],[int])
+        """
         self.update()
         return (self.__data_to_chip, self.__data_to_chip_times)
+
+    def data_from_chip_and_clear(self):
+        self.update()
+        data = self.__data_from_chip
+        time = self.__data_from_chip_times
+        self.__data_from_chip = []
+        self.__data_from_chip_times = []
+        return (data, time)
+    
+    def data_to_chip_and_clear(self):
+        self.update()
+        data = self.__data_to_chip
+        time = self.__data_to_chip_times
+        self.__data_to_chip = []
+        self.__data_to_chip_times = []
+        return (data, time)
     
     def errors(self):
+        """errors all errors corresponding to this interface
+
+        :return: list of all errors
+        :rtype: [string]
+        """
         self.update()
         return self.__errors
 
     def __str__(self):
+        """__str__ will return the current state, properies and data as a string
+
+        :return: the current state, properies and data
+        :rtype: string
+        """
         self.update()
         state_str = ("active" if self.__status == 2 else ("activation pending" if self.__status == 1 else ("not active" if self.__status == 0 else "error" )))
         return "SPI"+ \
@@ -103,6 +193,11 @@ class Interface_SPI:
             "\nERRORS: "+str(self.__errors) + "\n"
 
     def process_packet(self, packet):
+        """process_packet this function accepts packages fro this interface from the api and updates its internal state
+
+        :param packet: the packet to be processed
+        :type packet: Packet, or any sub class
+        """
         if packet.header() in self.__header:
             if packet.header() == self.__header[0]:
                 if packet.config_header() == ConfigSubHeader.CONF_ACTIVE:
@@ -137,6 +232,20 @@ class Interface_SPI:
         self.__status = -1
 
     def activate(self, mode="SPI_MODE0", speed_class=0, order="LSBFIRST",number_of_bytes=1,time=0):
+        """activate activates and configures the interface, 
+        if the interface is not availible on the UC it will put its state in en error state and prevent further use
+
+        :param mode: choose between "SPI_MODE0" "SPI_MODE1" "SPI_MODE2" or "SPI_MODE3" see arduino SPI docs, defaults to "SPI_MODE0"
+        :type mode: str, optional
+        :param speed_class: 0-8 0:10kHz 1:50kHz 2:100kHz 3:500kHz 4:1MHz 5:2MHz 6:4MHz 7:8MHz 8:12MHz, defaults to 0
+        :type speed_class: int, optional
+        :param order: Choose between "MSBFIRST" or "LSBFIRST" for order in which the word is transmitted, defaults to "LSBFIRST"
+        :type order: str, optional
+        :param number_of_bytes: 1-4 number of bytes contained in a word or better the length of a word, defaults to 1
+        :type number_of_bytes: int, optional
+        :param time: the time in us after start_experiment when this function should be executed, defaults to 0 (execute instantly)
+        :type time: int, optional
+        """
         if self.__status >= 1:
             logging.warning("SPI interface "+str(self.__header[0])+" is already activated or waiting activation, doing nothing")
         else:
@@ -150,6 +259,13 @@ class Interface_SPI:
             self.__status = 1
 
     def send(self, word, time = 0):
+        """send send a word via this interface
+
+        :param word: the word to send
+        :type word: int
+        :param time: the time in us after start_experiment when this word should be send, defaults to 0 (execute instantly)
+        :type time: int, optional
+        """
         self.__api.update_state()
         if (time == 0 and self.__status == 2) or (time > 0 and self.__status >= 1):
             self.__api.send_packet(Data32bitPacket(header = self.__header[1], value = word, time = time))
@@ -157,4 +273,6 @@ class Interface_SPI:
             logging.error("SPI interface "+str(self.__header[1])+" is not active, please activate first - word is not sent.")
 
     def update(self):
+        """update updates the internal state form the uC
+        """
         self.__api.update_state()

@@ -1,20 +1,20 @@
-"""
-    This file is part of the Firmware project to interface with small Async or Neuromorphic chips
-    Copyright (C) 2023 Ole Richter - University of Groningen
 
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+#    This file is part of the Firmware project to interface with small Async or Neuromorphic chips
+#    Copyright (C) 2023 Ole Richter - University of Groningen
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <https://www.gnu.org/licenses/>.
-"""
 
 from .header import ConfigMainHeader, PinHeader, ConfigSubHeader
 from .packet import ConfigPacket, PinPacket
@@ -22,13 +22,20 @@ from time import sleep
 import logging
 
 class Interface_PIN:
+    """ This exposes all the pin functionality for use,
+
+    for reading state and data please use the functions provided as they trigger an update of the internal state before returning values
+
+    at the moment it is limited to digital read and write
+    but is supposed to be extended to analog read and write and PWM functionality on first need / request
+    """
     def __init__(self, api_object, interface_id):
+        self.__status = 0
         """ 0 means not activated
             1 means activation pending
             2 means activted
             -1 means error
         """
-        self.__status = 0
         self.__status_timestamp = 0
         """
         - "INPUT" 
@@ -49,33 +56,97 @@ class Interface_PIN:
         self.__errors = []
         self.__pin_id = interface_id
         self.__api = api_object
-        self.__header = [ConfigMainHeader.IN_CONF_PIN, PinHeader.IN_PIN, PinHeader.IN_PIN_READ, PinHeader.OUT_PIN]
+        self.__header = [ConfigMainHeader.IN_CONF_PIN, PinHeader.IN_PIN, PinHeader.IN_PIN_READ, PinHeader.OUT_PIN_LOW, PinHeader.OUT_PIN_HIGH]
 
     def header(self):
+        """header returns the packet headers associated whith this interface
+
+        :return: packet headers of this interface
+        :rtype: Header (IntEnum)
+        """
         return self.__header
 
     def status(self):
+        """status returns the state of this interface,
+
+        it can be:
+         - active - everything is working fine
+         - activation pending - the uC has not acknolaged the activation yet after the request to activate the interface
+         - not active - the interface has not been configured and activate
+         - error - there was an error during activation or during use, please consult the errors using the errors function
+
+        :return: the state of the interface and the timestamp in us
+        :rtype: (string, int)
+        """
         self.update()
         state_str = ("active" if self.__status == 2 else ("activation pending" if self.__status == 1 else ("not active" if self.__status == 0 else "error" )))
         return (state_str,self.__status_timestamp)
     
     def interface_type(self):
+        """interface_type returns the currently configured mode of the pin
+
+        :return: mode of the pin like "INPUT" or "OUTPUT"
+        :rtype: string
+        """
         self.update()
         return (self.__type,self.__type_timestamp)
 
     def interval(self):
+        """interval not yet suported for PWM/analog read
+
+        :return: _description_
+        :rtype: _type_
+        """
         self.update()
         return (self.__interval,self.__interval_timestamp)
 
     def data_from_chip(self):
+        """data_from_chip will retun the data recoded by the uC send from the device under test (DUT)
+
+        will retun 2 lists: one with the word recoded and one with the time when it was recorded, linked by index
+
+        :return: the words from the DUT and the times of those words
+        :rtype: ([int],[int])
+        """
         self.update()
         return (self.__data_from_chip, data_from_chip_times)
     
     def data_to_chip(self):
+        """data_to_chip will retun the data send by the uC to the device under test (DUT)
+
+        will retun 2 lists: one with the word send and one with the exact time when it was send, linked by index
+
+        the time might differ slightly from the time you sheduled the send word, 
+        as it is the time when it was send out and the uC can only send one word at a time
+
+        :return: the words send to the DUT and the times of those words
+        :rtype: ([int],[int])
+        """
         self.update()
         return (self.__data_to_chip, self.__data_to_chip_times)
+
+    def data_from_chip_and_clear(self):
+        self.update()
+        data = self.__data_from_chip
+        time = self.__data_from_chip_times
+        self.__data_from_chip = []
+        self.__data_from_chip_times = []
+        return (data, time)
+    
+    def data_to_chip_and_clear(self):
+        self.update()
+        data = self.__data_to_chip
+        time = self.__data_to_chip_times
+        self.__data_to_chip = []
+        self.__data_to_chip_times = []
+        return (data, time)
     
     def errors(self):
+        """errors all errors corresponding to this interface
+
+        :return: list of all errors
+        :rtype: [string]
+        """
         self.update()
         return self.__errors
 
@@ -113,6 +184,10 @@ class Interface_PIN:
             elif packet.header() == self.__header[2] and packet.pin_id() == self.__pin_id:
                 return
             elif packet.header() == self.__header[3] and packet.pin_id() == self.__pin_id:
+                self.__data_from_chip.append(packet.value())
+                self.__data_from_chip_times.append(packet.time())
+                return
+            elif packet.header() == self.__header[4] and packet.pin_id() == self.__pin_id:
                 self.__data_from_chip.append(packet.value())
                 self.__data_from_chip_times.append(packet.time())
                 return

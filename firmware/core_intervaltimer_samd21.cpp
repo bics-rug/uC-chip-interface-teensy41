@@ -35,7 +35,7 @@ bool IntervalTimer::begin(callfunction_t callback, uint32_t usec) volatile {
         error_message(OUT_ERROR_CONFIGURATION_OUT_OF_BOUNDS,OUT_ERROR,usec);
         return false;
     }
-    if (counter_id < INTERVALTIMER_MAX_TIMERS){
+    if (counter_id >= INTERVALTIMER_MAX_TIMERS){
         noInterrupts();
         counter_id = 0;
         while (counter_id < INTERVALTIMER_MAX_TIMERS && counter_active[counter_id]){
@@ -131,33 +131,41 @@ void IntervalTimer::end() volatile {
         case 0:
           TC4->COUNT32.CTRLA.bit.ENABLE = 0;                       // Disable
           while (TC4->COUNT32.STATUS.bit.SYNCBUSY);                // Wait for sync
+          counter_id=INTERVALTIMER_MAX_TIMERS;
           break;
         case 1:
           TC5->COUNT32.CTRLA.bit.ENABLE = 0;                       // Disable
           while (TC5->COUNT32.STATUS.bit.SYNCBUSY);                // Wait for sync
+          counter_id=INTERVALTIMER_MAX_TIMERS;
           break;
       }
 
     }
 }
 void IntervalTimer::priority(uint8_t priority) volatile {
-    last_priority = priority;
+    if (priority > 3) {
+      last_priority = priority;
+      //NVIC_SetPriority(EIC_IRQn, 2);
+    }
+    else last_priority = priority;
     update(last_period);
 }
 
 void TC4_Handler()  
 {    
+    TC4->COUNT32.INTFLAG.bit.OVF = 1;             // Clear OVF flag
     if (IntervalTimer::_TC4_callfunc != NULL) IntervalTimer::_TC4_callfunc();  
   //if (TC4->COUNT32.INTFLAG.bit.OVF && TC4->COUNT32.INTENSET.bit.OVF) {        
-    TC4->COUNT32.INTFLAG.bit.OVF = 1;             // Clear OVF flag
+    //TC4->COUNT32.INTFLAG.bit.OVF = 1;             // Clear OVF flag
   //}
 }
 
 void TC5_Handler()                                         
 { 
+    TC5->COUNT32.INTFLAG.bit.OVF = 1;             // Clear OVF flag
     if (IntervalTimer::_TC5_callfunc != NULL) IntervalTimer::_TC5_callfunc();
   //if (TC5->COUNT32.INTFLAG.bit.OVF && TC5->COUNT32.INTENSET.bit.OVF){        
-    TC5->COUNT32.INTFLAG.bit.OVF = 1;             // Clear OVF flag
+    //TC5->COUNT32.INTFLAG.bit.OVF = 1;             // Clear OVF flag
   //}
 }
 #endif

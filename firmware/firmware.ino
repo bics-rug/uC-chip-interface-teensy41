@@ -111,9 +111,15 @@ void loop() {
     send_output_ring_buffer_first();
   } 
 
-  // send error if output buffer is full,
-  else if (output_ring_buffer_start == (output_ring_buffer_next_free + 1) % OUTPUT_BUFFER_SIZE) {
-    error_message_bypass_buffer(OUT_ERROR_OUTPUT_FULL,OUT_ERROR,output_ring_buffer_next_free);
-  } 
+  // send error if output buffer is full, DoS
+  //else if (output_ring_buffer_start == (output_ring_buffer_next_free + 1) % OUTPUT_BUFFER_SIZE) {
+  //  error_message_bypass_buffer(OUT_ERROR,OUT_ERROR_OUTPUT_FULL,output_ring_buffer_next_free);
+  //} 
 
+  if (loop_runs_without_gpio_interrups > 0){
+    loop_runs_without_gpio_interrups--;
+    if (loop_runs_without_gpio_interrups == 0){
+      enable_gpio_interrupt();
+    }
+  }
 }

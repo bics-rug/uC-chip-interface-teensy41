@@ -145,6 +145,7 @@ Interface_i2c::Interface_i2c(uint8_t id, uint32_t frequency) {
         if(reserve_output_pin(I2C_SCL_PORT, IN_CONF_I2C0) && reserve_input_pin(I2C_SDA_PORT, IN_CONF_I2C0)){
           _i2c = &Wire;
           _i2c->setClock(_frequency);
+          _i2c->setTimeout(1000);
           _i2c->begin();
           Interface_i2c::active[id] = true;
         } 
@@ -154,6 +155,7 @@ Interface_i2c::Interface_i2c(uint8_t id, uint32_t frequency) {
         if(reserve_output_pin(I2C_SCL1_PORT, IN_CONF_I2C1) && reserve_input_pin(I2C_SDA1_PORT, IN_CONF_I2C1)){
           _i2c = &Wire1;
           _i2c->setClock(_frequency);
+          _i2c->setTimeout(1000);
           _i2c->begin();
           Interface_i2c::active[id] = true;
         } 
@@ -164,6 +166,7 @@ Interface_i2c::Interface_i2c(uint8_t id, uint32_t frequency) {
         if(reserve_output_pin(I2C_SCL2_PORT, IN_CONF_I2C2) && reserve_input_pin(I2C_SDA2_PORT, IN_CONF_I2C2)){
           _i2c = &Wire2;
           _i2c->setClock(_frequency);
+          _i2c->setTimeout(1000);
           _i2c->begin();
           Interface_i2c::active[id] = true;
         } 

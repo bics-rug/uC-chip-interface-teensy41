@@ -43,6 +43,11 @@ extern volatile bool output_buffer_read;
 extern volatile unsigned long offset_time; // offset time is in microseconds, 0 also doubles as no recording
 extern volatile bool read_active;
 
+extern volatile uint16_t loop_runs_without_gpio_interrups;
+extern volatile bool is_realtime;
+
+void disable_gpio_interrupt();
+void enable_gpio_interrupt();
 void setup_ring_buffer();
 bool is_output_buffer_not_full();
 void set_read_on_request(uint8_t state);

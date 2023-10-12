@@ -1,3 +1,7 @@
+### doxygen ##
+docs/html
+docs/latex
+
 ######## C/C++ ########
 # Prerequisites
 *.d

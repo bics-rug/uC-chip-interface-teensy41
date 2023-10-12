@@ -41,7 +41,7 @@ class IntervalTimer {
         IntervalTimer() {
             counter_id = INTERVALTIMER_MAX_TIMERS;
             last_period = 100U;
-            last_priority = 200U;
+            last_priority = 3U;
         }
         ~IntervalTimer() {end();}
         

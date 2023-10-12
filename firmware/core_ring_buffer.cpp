@@ -29,6 +29,9 @@ volatile bool output_buffer_read = 1;
 
 volatile unsigned long offset_time = 0; // offset time is in microseconds, 0 also doubles as no recording
 volatile bool read_active = 0;
+volatile uint16_t loop_runs_without_gpio_interrups = 0;
+
+volatile bool is_realtime = 1;
 
 void setup_ring_buffer(){
   //input_ring_buffer = (packet_t*) malloc(sizeof(packet_t)*INPUT_BUFFER_SIZE);
@@ -45,20 +48,71 @@ void set_read_on_request(uint8_t state){
   send_config(IN_CONF_READ_ON_REQUEST,CONF_NONE,state);
 }
 
+void disable_gpio_interrupt(){
+  #if defined(ARDUINO_TEENSY41) || defined(ARDUINO_TEENSY40)
+  NVIC_DISABLE_IRQ(IRQ_GPIO6789);
+  #elif defined(ARDUINO_ARCH_SAMD) 
+  NVIC_DisableIRQ(EIC_IRQn);
+  #else
+  //this will not work as the serial requires interrupts
+  noInterrupts();
+  #endif
+}
+void enable_gpio_interrupt(){
+  #if defined(ARDUINO_TEENSY41) || defined(ARDUINO_TEENSY40)
+  NVIC_ENABLE_IRQ(IRQ_GPIO6789);
+  #elif defined(ARDUINO_ARCH_SAMD) 
+  NVIC_EnableIRQ(EIC_IRQn);
+  #else
+  //this will not work as the serial requires interrupts 
+  interrupt();
+  #endif
+}
+
 bool is_output_buffer_not_full(){
-  if (output_ring_buffer_start == (output_ring_buffer_next_free + 2) % OUTPUT_BUFFER_SIZE) {
+  uint32_t free_spots = 0;
+  if (output_ring_buffer_start > output_ring_buffer_next_free){
+    free_spots = output_ring_buffer_start-output_ring_buffer_next_free-1;
+  }
+  else{
+    free_spots = OUTPUT_BUFFER_SIZE-output_ring_buffer_next_free+output_ring_buffer_start-1;
+  }
+  // do most likey case first to speed up the request.
+  if (free_spots > 5 ) return true;
+  else if (free_spots > 1) {
+    loop_runs_without_gpio_interrups +=10;
+    disable_gpio_interrupt();
+    if (is_realtime){
+      noInterrupts();
+      output_ring_buffer[output_ring_buffer_next_free].error.header = OUT_WARNING_DATA_COLLECTION_SQUEUED;
+      output_ring_buffer[output_ring_buffer_next_free].error.org_header = OUT_WARNING_DATA_COLLECTION_SQUEUED;
+      output_ring_buffer[output_ring_buffer_next_free].error.value = free_spots;
+      output_ring_buffer_next_free = (output_ring_buffer_next_free + 1) % OUTPUT_BUFFER_SIZE; 
+      is_realtime = false;
+      interrupts();
+      }
+    return true;
+  }
+  else if (free_spots == 1) {
+    noInterrupts();
     output_ring_buffer[output_ring_buffer_next_free].error.header = OUT_ERROR_OUTPUT_FULL;
     output_ring_buffer[output_ring_buffer_next_free].error.org_header = OUT_ERROR_OUTPUT_FULL;
     output_ring_buffer[output_ring_buffer_next_free].error.value = 1;
     output_ring_buffer_next_free = (output_ring_buffer_next_free + 1) % OUTPUT_BUFFER_SIZE; 
+    loop_runs_without_gpio_interrups +=5;
+    disable_gpio_interrupt();
+    interrupts();
     return false;         
   } 
-  else if(output_ring_buffer_start == (output_ring_buffer_next_free + 1) % OUTPUT_BUFFER_SIZE) {
+  else  {
+    noInterrupts();
     uint16_t index = output_ring_buffer_next_free == 0 ? OUTPUT_BUFFER_SIZE-1 : output_ring_buffer_next_free-1;
-    output_ring_buffer[index].data.value++;
+    output_ring_buffer[index].error.value++;
+    loop_runs_without_gpio_interrups +=5;
+    disable_gpio_interrupt();
+    interrupts();
     return false;
   }
-  else return true;
 }
 
 void send_input_ring_buffer_free_spots(){

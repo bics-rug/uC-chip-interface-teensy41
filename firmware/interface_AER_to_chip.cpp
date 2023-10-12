@@ -149,6 +149,7 @@ bool AER_to_chip::dataWrite(uint32_t data) volatile
   bool handshakeStatus = true;
 
   setData(data);
+  interrupts();
   reqWrite(1);
 
   while(!ackRead()) {

@@ -346,10 +346,22 @@ enum inPacketHeader : uint8_t {
   */
   IN_CONF_ASYNC_FROM_CHIP7 = 87U, 
 
+  
   /*
    chip config to free up main headers
   */
   IN_CONF_UC = 99U, 
+
+  /*
+    in mapper key switches into sequence transmission mode,
+    the next packet is considered the key all subsequent packages 
+    are considdered values until IN_MAPPER_END.
+  */
+  IN_MAPPER_KEY = 190U, 
+  /*
+    In mapper end switches back to normal packet exec mode.
+  */
+  IN_MAPPER_END = 191U, 
 
   /*
      this packet is used to reset the full uC
@@ -357,7 +369,6 @@ enum inPacketHeader : uint8_t {
       - value is ignored
   */
   IN_RESET = 254U,
-  
 };
 
 /*
@@ -382,13 +393,21 @@ enum outPacketHeader : uint8_t {
   */
   OUT_FREE_INSTRUCTION_SPOTS = 101U,
   /*
-   After a input pin change this records the change
+   After a input pin change below threshold this records the change
    uses pin
     - exec_time the time the change occured
     - pin the pin id
-    - value the new state
+    - value the new state (value is manatory)
   */
-  OUT_PIN = 110U,
+  OUT_PIN_LOW = 110U,
+    /*
+   After a input pin change above threshold this records the change
+   uses pin
+    - exec_time the time the change occured
+    - pin the pin id
+    - value the new state (value is manatory)
+  */
+  OUT_PIN_HIGH = 111U,
   /*
    responce to the IN_SPI0_32 packet
    uses data32
@@ -556,8 +575,14 @@ enum outPacketHeader : uint8_t {
     - the wrong data
   */
   OUT_ERROR_DATA_OUT_OF_BOUNDS = 212U,
- 
- 
+  /*
+   the data collection is taking up to much time (to many requests)
+   the uC does not have time to ship the data to the PC.
+   from now on whenever this happens the uC will pause data collection
+   for a moment and transmit ~ 10 pakages to the PC before it resumes 
+   data collection
+  */
+  OUT_WARNING_DATA_COLLECTION_SQUEUED = 213U,
   
 };
   

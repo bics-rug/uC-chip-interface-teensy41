@@ -296,24 +296,59 @@ uint32_t AER_from_chip::getData() volatile{
     delay20ns(_delay);
   }
   if (_type == ASYNC_4Phase_MCP23017){
-      uint8_t count_shift = 0;
-  Wire.beginTransmission((uint8_t) 32U);
-  Wire.write((uint8_t) 18U);
-  Wire.endTransmission();
 
-  Wire.requestFrom((uint8_t) 32U,2,true);
-  while (Wire.available()>0){
-    data |= Wire.read()<<8*count_shift;
-    count_shift++;
-  }
-  Wire.beginTransmission((uint8_t) 33U);
-  Wire.write((uint8_t) 18U);
-  Wire.endTransmission(false);
-  Wire.requestFrom((uint8_t) 33U,2,true);
-  while (Wire.available()>0){
-    data |= Wire.read()<<8*count_shift;
-    count_shift++;
-  }
+      uint8_t interface;
+      switch(_id){
+        case 0: interface = OUT_ASYNC_FROM_CHIP0; break;
+        case 1: interface = OUT_ASYNC_FROM_CHIP1; break;
+        case 2: interface = OUT_ASYNC_FROM_CHIP2; break;
+        case 3: interface = OUT_ASYNC_FROM_CHIP3; break;
+        case 4: interface = OUT_ASYNC_FROM_CHIP4; break;
+        case 5: interface = OUT_ASYNC_FROM_CHIP5; break;
+        case 6: interface = OUT_ASYNC_FROM_CHIP6; break;
+        case 7: interface = OUT_ASYNC_FROM_CHIP7; break;
+        default:interface = OUT_ERROR; break;
+      }
+      uint8_t count_shift = 0;
+      uint8_t transmission_success = 0;
+      Wire.beginTransmission((uint8_t) 32U);
+      Wire.write((uint8_t) 18U);
+      
+      transmission_success = Wire.endTransmission(false);
+      if(transmission_success>0){
+        error_message(OUT_ERROR_PERIPHERAL_INTERFACE_NOT_READY,interface,transmission_success,IN_I2C2);
+        return 0;
+      }
+     
+      transmission_success = Wire.requestFrom((uint8_t) 32U,2,true);
+      if(transmission_success != 2){
+        error_message(OUT_ERROR_PERIPHERAL_INTERFACE_NOT_READY,interface,transmission_success,OUT_I2C2);
+        return 0;
+      }
+
+      data |= Wire.read()<<8*count_shift;
+      count_shift++;
+      data |= Wire.read()<<8*count_shift;
+      count_shift++;
+
+      Wire.beginTransmission((uint8_t) 33U);
+      Wire.write((uint8_t) 18U);
+      transmission_success = Wire.endTransmission(false);
+      if(transmission_success>0){
+        error_message(OUT_ERROR_PERIPHERAL_INTERFACE_NOT_READY,interface,transmission_success,IN_I2C2);
+        return 0;
+      }
+      
+      transmission_success = Wire.requestFrom((uint8_t) 33U,2,true);
+      if(transmission_success != 2){
+        error_message(OUT_ERROR_PERIPHERAL_INTERFACE_NOT_READY,interface,transmission_success,OUT_I2C2);
+        return 0;
+      }
+      data |= Wire.read()<<8*count_shift;
+      count_shift++;
+      data |= Wire.read()<<8*count_shift;
+      count_shift++;
+      
   
     // data = Interface_i2c::inst[0]->read_return(32U,18U);
     // data |= (Interface_i2c::inst[0]->read_return(33U,18U)<<16);
@@ -339,8 +374,6 @@ uint32_t AER_from_chip::getData() volatile{
 }
 
 
-
-//@TODO move to AER_FROM_CHIP
 void aer_ISR(uint8_t id) {
   if (AER_from_chip::inst[id]->reqRead()) {
       if ( offset_time != 0 ) { 
