@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+### Fixed
+
+### Changed
+
+### Removed
+
+### Deprecated
+
+## [0.9.0] - 2023-10-13
+
 ### Added 
  - all executions are acklogage with timestamp to the PC
  - added support for Teensy 4.0 (MIMXR)
@@ -19,6 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
  - python can now be imported like a package
  - I2C interfaces mow available
  - added level 0 api for mapper (not functional) 
+ - documentation website https://olerichter.github.io/uC-chip-interface
 
 ### Fixed
  - output buffer now behaves the same as the input buffer
@@ -32,8 +45,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
  - special pin conf ackloage package 
-
-### Deprecated
 
 ## [0.1.0] - 2023-01-25
 

@@ -1,28 +1,28 @@
+
 # uC chip interface for async/neuromorphic test chips
 
-the purpose of this firmware is to have an easy interface from the PC to a test chip:
+This firmware project is built to have a reusable interface for testing async/neuromorphic chips, also known as Device under Test (DuT).
 
-the following functions are currently availible:
+The goal is that the firmware is free of any application-specific integrated circuit (ASIC) or printed circuit board (PCB) specific code. The User provides this configuration at runtime via an easy-to-use mid-level API. We are keeping the firmware maintainable and portable.
 
-- all commands can be timed with ~100us presision (modifiable)
-- all interfaces are dynamicly set up by API on runtime (no seperate firmare for different chips)
-- set pin high/low
-- send SPI word 8/32 bits
-- send 4 phase HS word 0-32bit
-- record pin change with time stamp
-- read SPI word 8/32 bits with time stamp
-- read 4 phase HS word 0-32bit with time stamp
-- primitive python API
+### Key features are:
+ - different Async, SPI, I2C interfaces and I/O pin functionality
+ - every action and incoming data is timestamped and reported 
+ - all actions can be precisely timed with ~100us precision
+ - simple mid-level python API
+ - defensively programmed with many error notifications
 
-for planned additions see TODO.md
+### Currently supported uC (MicroController):
+ - Teensy 4.1 (recommended for device testing)
+ - Teensy 4.0
+ - Arduino Zero (recommended for firmware development - debugger)
+ - Arduino MKR variants
 
-## how to contribute
+### Project home
+The project is located at https://github.com/olerichter/uC-chip-interface
 
-contributions are very wellcome, please reach out and/or open a pull request!
+The documentation can be found at https://olerichter.github.io/uC-chip-interface
 
-it would help us and your pull request if you add code/function docs and ideally if it makes sense a test/example, 
-please note down your changes in CHANGELOG.md below [Unreleased].
+# For fruther description see [documentation main page](docs/main.md)
 
-@people with direct repo access, do not commit to main or dev directly do feature branches and pull requests! 
-
-all chip specific files and higher level APIs should be in thier own seperate repos
+## [Changelog](CHANGELOG.md)
