@@ -80,10 +80,21 @@ void loop() {
 
     // read instruction packet
     packet_t current_instruction; 
+
     // because we use different storage allignment we need to transfer each byte individual
+    // also checks if the communication protocol needs to be aligned
     uint8_t position;
     for (position = 0; position < sizeof(packet_t); position++){
       Serial.readBytes(&(current_instruction.bytes[position]), 1);
+      // check if the PC reqests a communication protocol alignment by writing 9 bytes 
+      // of IN_ALIGN_COMMUNICATION_PROTOCOL (255) so that uC catches one of them as a header
+      if (position == 0 && current_instruction.bytes[position] == IN_ALIGN_COMMUNICATION_PROTOCOL){
+        do {
+          Serial.readBytes(&(current_instruction.bytes[0]), 1);
+        } while (current_instruction.bytes[position] != IN_ALIGN_COMMUNICATION_PROTOCOL);
+        uint8_t position_out;
+        for (position_out = 0; position_out < sizeof(packet_t); position_out++) Serial.write(IN_ALIGN_COMMUNICATION_PROTOCOL);
+      }
     }
 
     // exec instruction if exec_time == 0

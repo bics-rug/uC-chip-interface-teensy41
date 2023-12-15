@@ -369,6 +369,14 @@ enum inPacketHeader : uint8_t {
       - value is ignored
   */
   IN_RESET = 254U,
+  /*
+     This packet is used to align the communication protocol between the PC and the uC
+     it is send by the PC and the uC will respond with the same sequence:
+     the sequence is 9 bytes of 255U followed by 1 byte of 0U
+     the 9 bytes are needed so that one of them is interpreted as the header
+  */
+  IN_ALIGN_COMMUNICATION_PROTOCOL = 255U,
+
 };
 
 /*
@@ -649,7 +657,7 @@ enum confPacketHeader : uint8_t {
   /*
     indication of no sub category
   */
-  CONF_NONE = 255U,
+  CONF_NONE = 253U,
   /*
    setting the pin for AER data channel X
    uses config

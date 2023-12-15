@@ -211,6 +211,10 @@ class uC_api:
         idle_write_pc = False
         idle_write_uc = 0
         idle_read = False
+        # init communication by forcing the uC to align
+        logging.info("send: aligning cummuication")
+        self.__connection.write(b'\xff\xff\xff\xff\xff\xff\xff\xff\xff')
+        # start communication
         while True:
             if not self.__write_buffer_timed.empty() or not self.__write_buffer.empty():
                 idle_write_pc = False
@@ -242,6 +246,16 @@ class uC_api:
             if self.__connection.in_waiting >= 9:
                 idle_read = False
                 byte_packet = self.__connection.read(size = 9)
+                # do reading alingnment
+                byte_packet = byte_packet.lstrip(b'\xff')
+                if len(byte_packet) < 9:
+                    if len(byte_packet) != 0:
+                        logging.warning("outgoing uC allignment needed shifted by "+str(len(byte_packet))+ " bytes")
+                        continue
+                    else:
+                        logging.debug("allignment triggered shifted by "+str(len(byte_packet))+ " bytes")
+                    byte_packet = bytearray(byte_packet).append(self.__connection.read(size = 9-len(byte_packet)))
+                # is now aligned
                 read_packet = Packet.from_bytearray(byte_packet)
                 logging.debug("read: "+str(read_packet))
                 if read_packet.header() is Data32bitHeader.OUT_FREE_INSTRUCTION_SPOTS:
