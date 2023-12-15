@@ -60,6 +60,7 @@ class Packet:
                                 return ErrorPacket.from_bytearray(byte_array)
                             except ValueError:
                                 logging.error("Header "+ str(unpacked[0]) +" is not a valid header, Packet:" + str(byte_array) +" "+ str(unpacked[0]) +" "+ str(unpacked[1]) +" "+ str(unpacked[2]))
+                                raise ValueError("Header "+ str(unpacked[0]) +" is not a valid header")
         except Exception as e:
             logging.error(e)
     def header(self):
@@ -112,13 +113,17 @@ class Data32bitPacket(Packet):
 
     @classmethod
     def from_bytearray(self, byte_array):
-        try:
-            unpacked = struct.unpack("<BII", byte_array)
-            return Data32bitPacket(header=Data32bitHeader(unpacked[0]),
-            value = unpacked[2],
-            time = unpacked[1])
-        except Exception as e:
-            return str(e) + ' (error)'
+        """
+        constructs a Data32bitPacket from a bytearray
+        @param byte_array: 9 byte bytearray to construct the Packet from
+        @return: Data32bitPacket
+        @raise Exception: if package construction fails
+        """
+        unpacked = struct.unpack("<BII", byte_array)
+        return Data32bitPacket(header=Data32bitHeader(unpacked[0]),
+        value = unpacked[2],
+        time = unpacked[1])
+
     
 class DataI2CPacket(Packet): 
 
@@ -179,14 +184,18 @@ class DataI2CPacket(Packet):
     
     @classmethod
     def from_bytearray(self, byte_array):
-        try:
-            unpacked = struct.unpack("<BIBBBB", byte_array)
-            return DataI2CPacket(header=DataI2CHeader(unpacked[0]),
-            device_address=unpacked[2]>>1,
-            register_address=unpacked[3], read=unpacked[2] & 0x1, value=unpacked[4]<<8+unpacked[5],
-            time = unpacked[1])
-        except Exception as e:
-            return str(e) + ' (error)'
+        """
+        constructs a DataI2CPacket from a bytearray
+        @param byte_array:  9 byte bytearray to construct the Packet from
+        @return: DataI2CPacket
+        @raise Exception: if package construction fails
+        """
+        unpacked = struct.unpack("<BIBBBB", byte_array)
+        return DataI2CPacket(header=DataI2CHeader(unpacked[0]),
+        device_address=unpacked[2]>>1,
+        register_address=unpacked[3], read=unpacked[2] & 0x1, value=unpacked[4]<<8+unpacked[5],
+        time = unpacked[1])
+
 
 """
 value: (int) 0 to set pin LOW, 1 to set pin HIGH.
@@ -232,14 +241,18 @@ class PinPacket(Packet):
 
     @classmethod
     def from_bytearray(self, byte_array):
-        try:
-            unpacked = struct.unpack("<BIBBBB", byte_array)
-            return PinPacket(header=PinHeader(unpacked[0]),
-            pin_id = unpacked[2],
-            value = unpacked[3],
-            time = unpacked[1])
-        except Exception as e:
-            return str(e) + ' (error)'
+        """
+        constructs a PinPacket from a bytearray
+        @param byte_array: 9 byte bytearray to construct the Packet from
+        @return: PinPacket
+        @raise Exception: if package construction fails
+        """
+        unpacked = struct.unpack("<BIBBBB", byte_array)
+        return PinPacket(header=PinHeader(unpacked[0]),
+        pin_id = unpacked[2],
+        value = unpacked[3],
+        time = unpacked[1])
+
 
 """
 header: (ConfigMainHeader) what's to be configured (e.g. PIN, SPI,...).
@@ -285,14 +298,18 @@ class ConfigPacket(Packet):
 
     @classmethod
     def from_bytearray(self, byte_array):
-        try:
-            unpacked = struct.unpack("<BIBBBB", byte_array)
-            return ConfigPacket(header=ConfigMainHeader(unpacked[0]),
-            config_header = ConfigSubHeader(unpacked[2]),
-            value = unpacked[3],
-            time = unpacked[1])
-        except Exception as e:
-            return str(e) + ' (error)'
+        """
+        constructs a ConfigPacket from a bytearray
+        @param byte_array: 9 byte bytearray to construct the Packet from
+        @return: ConfigPacket
+        @raise Exception: if package construction fails
+        """
+        unpacked = struct.unpack("<BIBBBB", byte_array)
+        return ConfigPacket(header=ConfigMainHeader(unpacked[0]),
+        config_header = ConfigSubHeader(unpacked[2]),
+        value = unpacked[3],
+        time = unpacked[1])
+
 
 
 class ErrorPacket(Packet): 
@@ -333,7 +350,7 @@ class ErrorPacket(Packet):
                         try:
                             self._org_header = ErrorHeader(header);
                         except ValueError:
-                            logging.error("Header "+ str(header) +" is not a valid header,")
+                            logging.error("source Header "+ str(header) +" is not a valid header,")
                             self._org_header = None;
     
 
@@ -351,10 +368,14 @@ class ErrorPacket(Packet):
 
     @classmethod
     def from_bytearray(self, byte_array):
-        try:
-            unpacked = struct.unpack("<BBIBBB", byte_array)
-            return ErrorPacket(header=ErrorHeader(unpacked[0]),
-            original_header = unpacked[1],
-            value = unpacked[2])
-        except Exception as e:
-            return str(e) + ' (error)'
+        """
+        constructs a ErrorPacket from a bytearray
+        @param byte_array: 9 byte bytearray to construct the Packet from
+        @return: ErrorPacket
+        @raise Exception: if package construction fails
+        """
+        unpacked = struct.unpack("<BBIBBB", byte_array)
+        return ErrorPacket(header=ErrorHeader(unpacked[0]),
+        original_header = unpacked[1],
+        value = unpacked[2])
+

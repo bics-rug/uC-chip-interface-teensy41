@@ -212,7 +212,7 @@ class uC_api:
         idle_write_uc = 0
         idle_read = False
         # init communication by forcing the uC to align
-        logging.info("send: aligning cummuication")
+        logging.info("send: aligning commuication")
         self.__connection.write(b'\xff\xff\xff\xff\xff\xff\xff\xff\xff')
         # start communication
         while True:
@@ -250,17 +250,32 @@ class uC_api:
                 byte_packet = byte_packet.lstrip(b'\xff')
                 if len(byte_packet) < 9:
                     if len(byte_packet) != 0:
-                        logging.warning("outgoing uC allignment needed shifted by "+str(len(byte_packet))+ " bytes")
-                        continue
+                        logging.warning("outgoing uC alignment needed, shifted by "+str(len(byte_packet))+ " bytes")
+                        # partial packet
+                        if self.__connection.in_waiting < 9-len(byte_packet):
+                            logging.error("partial packet received, but not enough bytes send by uC, trying to recover by realigning")
+                            self.__connection.write(b'\xff\xff\xff\xff\xff\xff\xff\xff\xff')
+                            continue
+                        byte_packet = bytearray(byte_packet).append(self.__connection.read(size = 9-len(byte_packet)))
+                        
                     else:
-                        logging.debug("allignment triggered shifted by "+str(len(byte_packet))+ " bytes")
-                    byte_packet = bytearray(byte_packet).append(self.__connection.read(size = 9-len(byte_packet)))
+                        logging.debug("alignment triggered shifted by "+str(len(byte_packet))+ " bytes")
+                        # no packet, jump to next iteration
+                        continue
                 # is now aligned
-                read_packet = Packet.from_bytearray(byte_packet)
+                try:
+                    read_packet = Packet.from_bytearray(byte_packet)
+                except:
+                    logging.error("packet is malformed, maybe misaligned, trying to recover by realigning")
+                    self.__connection.write(b'\xff\xff\xff\xff\xff\xff\xff\xff\xff')
+                    continue
                 logging.debug("read: "+str(read_packet))
                 if read_packet.header() is Data32bitHeader.OUT_FREE_INSTRUCTION_SPOTS:
                     self.__free_input_queue_spots_on_uc = read_packet.value()
                     idle_write_uc = 0
+                elif read_packet.header() is ErrorHeader.OUT_ERROR_UNKNOWN_INSTRUCTION or read_packet.header() is ErrorHeader.OUT_ERROR_UNKNOWN_CONFIGURATION:
+                    logging.error("uC is reporting that it cant understand a send packet, either API and firmware are a different version or communication is not aligned, trying to recover by realigning")
+                    self.__connection.write(b'\xff\xff\xff\xff\xff\xff\xff\xff\xff')
                 else:
                     self.__read_buffer.put(read_packet)
             else:
