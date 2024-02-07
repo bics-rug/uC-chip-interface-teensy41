@@ -75,6 +75,22 @@ class uC_api:
             for async_id in range(8):
                 self.async_from_chip.append(Interface_Async(self,async_id,"FROM_CHIP"))
         self.__communication_thread.start()
+        # wait for 10 seconds for the uC to align
+        connection = False
+        for i in range(40):
+            sleep(0.25)
+            if self.__read_buffer.empty() == False:
+                read_packet = self.__read_buffer.get()
+                self.__read_buffer.task_done()
+                if read_packet.header() == DataI2CHeader.OUT_ALIGN_SUCCESS_VERSION:
+                    logging.warning("uC is ready - firmware version: "+str(read_packet.device_address())+"."+str(read_packet.register_address())+"."+str(read_packet.value()))
+                    connection = True
+                    break
+                else:
+                    logging.warning("unknown packet received, while connecting to uC for the first time: "+str(read_packet))
+        if connection == False:
+            logging.error("uC is not responding, wrong port?")
+            self.close_connection()
 
     def update_state(self):
         """update_state This method processes all availible messages from the uC and updates the internal representaion

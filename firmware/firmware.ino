@@ -28,6 +28,11 @@
 #include "core_instruction_exec.h"
 //#include <avr/wdt.h>
 
+enum firmware_version : uint8_t {
+  VERSION_MAJOR = 0U,
+  VERSION_MINOR = 9U,
+  VERSION_PATCH = 1U,
+};
 
 /*
  This programm is supposed to be used for interfacing with small Async or Neuromorphic chips,
@@ -94,6 +99,7 @@ void loop() {
         } while (current_instruction.bytes[position] != IN_ALIGN_COMMUNICATION_PROTOCOL);
         uint8_t position_out;
         for (position_out = 0; position_out < sizeof(packet_t); position_out++) Serial.write(IN_ALIGN_COMMUNICATION_PROTOCOL);
+        send_data_i2c(OUT_ALIGN_SUCCESS_VERSION, VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH>>8, VERSION_PATCH);
       }
     }
 

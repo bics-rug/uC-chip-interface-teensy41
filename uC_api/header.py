@@ -383,6 +383,18 @@ class DataI2CHeader(enum.IntEnum) :
       - value the 8bit word that was read on the SPI
     """
 
+    OUT_ALIGN_SUCCESS_VERSION = 253, """
+     responce to alignment request, as the first communication is an alignment
+     confirms the connection with the uC.
+     also sends the firmware version - to see if the correct version is running
+     uses data_i2c
+      - exec_time the current run time 
+      - device address - major version
+      - register address - minor version
+      - value_ms the MS 8bit of patch version
+      - value_ls the LS 8bit of patch version
+    """
+
 @enum.unique
 class ConfigMainHeader(enum.IntEnum) :
     """

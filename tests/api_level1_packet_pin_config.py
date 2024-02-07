@@ -20,12 +20,12 @@
 import serial, sys, time, struct, logging
 from enum import Enum
 
-sys.path.append('../uC_api')
-sys.path.append('./uC_api')
+sys.path.append('..')
+sys.path.append('.')
 
-from packet import ConfigPacket, PinPacket, Data32bitPacket, Packet
-from header import ConfigMainHeader, ConfigSubHeader, PinHeader, Data32bitHeader
-from uC import uC_api
+#from packet import ConfigPacket, PinPacket, Data32bitPacket, Packet
+#from header import ConfigMainHeader, ConfigSubHeader, PinHeader, Data32bitHeader
+from uC_api import *
 
 logging.basicConfig(level=logging.INFO)
 

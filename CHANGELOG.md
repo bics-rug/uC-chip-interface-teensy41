@@ -9,7 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - code documentation
-
+- check of comunication with uC while starting, error on no connection
+- sends firmware version on aligning connection
 ### Fixed
  - trys to recover from misaligned communication if the byte sequence goes out of sync
 
