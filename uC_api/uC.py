@@ -29,6 +29,9 @@ from .interface_async import Interface_Async
 from queue import Queue
 
 class FIRMWARE_VERSION(enum.IntEnum):
+    """FIRMWARE_VERSION specifies the version of the uC firmware that this API is compatible with
+    major and minor version need to match, patch version of the API can be lower than the (newer) firmware 
+    """
     FIRMWARE_VERSION_MAJOR = 0
     FIRMWARE_VERSION_MINOR = 9
     FIRMWARE_VERSION_PATCH = 1
@@ -67,6 +70,7 @@ class uC_api:
         self.__last_timed_packet = 0
         self.__api_level = api_level
         if api_level == 2:
+            # create all the interface objects
             self.errors = []
             self.spi = [Interface_SPI(self,0), Interface_SPI(self,1), Interface_SPI(self,2)]
             self.i2c = [Interface_I2C(self,0), Interface_I2C(self,1), Interface_I2C(self,2)]
@@ -90,25 +94,31 @@ class uC_api:
 
         level 2 only
         """
+        # process all availible messages from the uC one by one
         while not self.__read_buffer.empty():
+            # get the next package
             packet_to_process = self.__read_buffer.get()
+            # choose the interface to process the package
             if isinstance(packet_to_process, ErrorPacket):
                 header_for_sorting = packet_to_process.original_header()
             else:
                 header_for_sorting = packet_to_process.header()
+        
             no_match = True
+            # high level experiment control packet
             if header_for_sorting == Data32bitHeader.IN_SET_TIME:
                 self.__experiment_state.append(packet_to_process.value())
                 self.__experiment_state_timestamp.append(packet_to_process.time())
                 no_match = False
                 continue
-            
+            # iterate though all interfaces and check if they signal they are responcible for that header
             for interface in self.async_to_chip + self.async_from_chip + self.spi + self.i2c:
                 if header_for_sorting in interface.header():
                     interface.process_packet(packet_to_process)
                     self.__read_buffer.task_done()
                     no_match = False
                     break
+            # pins use all the same header, so we assing the package to the pin object with the same id
             if header_for_sorting == self.pin[0].header()[0]:
                     self.pin[packet_to_process.value()].process_packet(packet_to_process)
                     self.__read_buffer.task_done()
@@ -119,6 +129,7 @@ class uC_api:
                     self.__read_buffer.task_done()
                     no_match = False
                     continue
+            # if no interface is responcible for the package, we add it to the error package list
             if no_match:
                 self.errors.append(str(packet_to_process))
                 self.__read_buffer.task_done()
@@ -158,13 +169,15 @@ class uC_api:
         :param packet_to_send: the package to be send
         :type packet_to_send: Packet, or any subclass
         """
+        # reset the time reference for the timed instructions
         if packet_to_send.header() == Data32bitHeader.IN_SET_TIME:
             self.__last_timed_packet = packet_to_send.value()
-
+        # put the packet in the buffer depending if it s instant or timed
         if packet_to_send.time() == 0:
             self.__write_buffer.put(packet_to_send)
         else:
             self.__write_buffer_timed.put(packet_to_send)
+            # check if the timed instructions are sorted in time
             if packet_to_send.time() < self.__last_timed_packet:
                 logging.warning("the instructions are not sorted in time - execution order will be inconsistent")
 
@@ -200,47 +213,66 @@ class uC_api:
         """close_connection closes the serial connection to the uC and blocks until this is done
         resets the uC too
         """
+        # place close connection packet in the write buffer, so the worker thread closes the connection and stop itself
         self.__write_buffer.put(Data32bitPacket(Data32bitHeader.UC_CLOSE_CONNECTION))
+        # add reset to the experiment state history
         self.__experiment_state.append(-1)
         self.__experiment_state_timestamp.append(-1)
+        # wait for the worker thread to close the connection
         self.__communication_thread.join()
 
     def reset(self):
         """reset uC and hope the serial connection survives
         """
+        # place reset packet in the write buffer, so the worker thread sends it
         self.__write_buffer.put(Data32bitPacket(Data32bitHeader.IN_RESET))
+        # add reset to the experiment state history
         self.__experiment_state.append(-1)
         self.__experiment_state_timestamp.append(-1)
 
     def __check_first_connection(self):
         """__check_first_connection checks if the uC is responding and prints the firmware version
+        if the firmware version does not match the API version it will print a warning
         """
         logging.info("send: opening connection - aligning commuication")
+        # write 9 bytes to the uC to align the communication
         self.__connection.write(b'\xff\xff\xff\xff\xff\xff\xff\xff\xff')
+        # wait for 10 seconds for the uC to align
         for i in range(40):
+            # check if the uC has send a packet
             if self.__connection.in_waiting >= 9:
                 byte_packet = self.__connection.read(size = 9)
+                # do reading alingnment
                 byte_packet = byte_packet.lstrip(b'\xff')
                 sleep(0.05)
+                # if the packet is not complete, try to recover by reading the rest of the packet
                 if len(byte_packet) < 9:
                     if len(byte_packet) == 0:
+                        # no packet (was only alignment bytes), jump to next iteration
                         continue
                     elif self.__connection.in_waiting < 9-len(byte_packet):
-                            logging.error("partial packet received, but not enough bytes send by uC, trying to recover by realigning")
-                            self.__connection.write(b'\xff\xff\xff\xff\xff\xff\xff\xff\xff')
-                            continue
-                    byte_packet = bytearray(byte_packet).extend(bytearray(self.__connection.read(size = 9-len(byte_packet))))
+                        # something went wrong, try again
+                        logging.error("partial packet received, but not enough bytes send by uC, trying to recover by realigning")
+                        self.__connection.write(b'\xff\xff\xff\xff\xff\xff\xff\xff\xff')
+                        continue
+                    # complete partial packet
+                    else:
+                        byte_packet = bytearray(byte_packet).extend(bytearray(self.__connection.read(size = 9-len(byte_packet))))
+                # convert the byte packet to a packet object
                 read_packet = Packet.from_bytearray(byte_packet)
+                # check if the packet is the expected Success packet
                 if read_packet.header() == ErrorHeader.OUT_ALIGN_SUCCESS_VERSION:
                     logging.info("uC is ready - firmware version: "+str(read_packet.original_header())+"."+str(read_packet.original_sub_header())+"."+str(read_packet.value()))
+                    # check if the firmware version matches the API version
                     if read_packet.original_header() != FIRMWARE_VERSION.FIRMWARE_VERSION_MAJOR or read_packet.original_sub_header() != FIRMWARE_VERSION.FIRMWARE_VERSION_MINOR or read_packet.value() < FIRMWARE_VERSION.FIRMWARE_VERSION_PATCH:
                         logging.warning("uC firmware version does not match the API version: \nfirmware version: "+str(read_packet.original_header())+"."+str(read_packet.original_sub_header())+"."+str(read_packet.value())+" \nAPI version: "+str(int(FIRMWARE_VERSION.FIRMWARE_VERSION_MAJOR))+"."+str(int(FIRMWARE_VERSION.FIRMWARE_VERSION_MINOR))+"."+str(int(FIRMWARE_VERSION.FIRMWARE_VERSION_PATCH)))
+                    # connection is established
                     connection = True
                     return True
                 else:
                     logging.warning("unknown packet received, while connecting to uC for the first time: "+str(read_packet))
             sleep(0.25)
-
+        # connection failed after 40 tries/10sec
         if connection == False:
             logging.error("uC is not responding for 10 sec, wrong port?, no permission?")
             return False
@@ -259,71 +291,97 @@ class uC_api:
 
         # start communication
         while True:
+            # check if there is something to send
             if not self.__write_buffer_timed.empty() or not self.__write_buffer.empty():
+                # set loop slowdown condition flags to false
                 idle_write_pc = False
+                # first write the instant packets
                 if not self.__write_buffer.empty():
                     data_packet = self.__write_buffer.get()
+                    # check and close the connection if requested by API
                     if data_packet.header() == Data32bitHeader.UC_CLOSE_CONNECTION:
                         self.__connection.write(Data32bitPacket(Data32bitHeader.IN_RESET).to_bytearray())
                         self.__connection.close()
                         return
+                    # else send the packet
                     self.__connection.write(data_packet.to_bytearray())
                     logging.debug("send instant: "+str(data_packet))
                     self.__write_buffer.task_done()
+                # then write the timed packets
                 else:
+                    # check if there is space in the uC input queue
                     if self.__free_input_queue_spots_on_uc > 0 :
+                        # send the packet and decrease the free input queue spots reference in the API
                         data_packet = self.__write_buffer_timed.get()
                         self.__free_input_queue_spots_on_uc -= 1
                         self.__connection.write(data_packet.to_bytearray())
                         logging.debug("send timed: "+str(data_packet))
                         self.__write_buffer_timed.task_done()
                     else:
+                        # request the free input queue spots from the uC, 
+                        # first request is send instantly, then every 2000th loop run through
+                        # to not overload the uC with requests, uC will also report the free input
+                        # queue spots when it frees up space and the queue was full before
                         idle_write_uc += 1
                         if idle_write_uc%2000 == 1:
                             packet_to_send = Data32bitPacket(Data32bitHeader.IN_FREE_INSTRUCTION_SPOTS)
                             self.__connection.write(packet_to_send.to_bytearray())
                             logging.debug("send timed: "+str(packet_to_send))
             else:
+                # set write loop slowdown condition flag
                 idle_write_pc = True
 
+            # check if there is a package to read from the serial connection
             if self.__connection.in_waiting >= 9:
                 idle_read = False
                 byte_packet = self.__connection.read(size = 9)
-                # do reading alingnment
+                # remove alignment bytes
                 byte_packet = byte_packet.lstrip(b'\xff')
+                # check if the packet is complete
                 if len(byte_packet) < 9:
                     if len(byte_packet) != 0:
+                        #initiate alignment for incompleate packets
                         logging.warning("outgoing uC alignment needed, shifted by "+str(len(byte_packet))+ " bytes")
-                        # partial packet
+                        # partial packet not recoverable
                         if self.__connection.in_waiting < 9-len(byte_packet):
                             logging.error("partial packet received, but not enough bytes send by uC, trying to recover by realigning")
                             self.__connection.write(b'\xff\xff\xff\xff\xff\xff\xff\xff\xff')
                             continue
+                        # to complete partial packet
                         byte_packet = bytearray(byte_packet).extend(bytearray(self.__connection.read(size = 9-len(byte_packet))))
                         
                     else:
-                        logging.debug("alignment triggered shifted by "+str(len(byte_packet))+ " bytes")
+                        logging.debug("alignment sucesss - no incoming alignment error")
                         # no packet, jump to next iteration
                         continue
                 # is now aligned
                 try:
+                    # convert the byte packet to a packet object
                     read_packet = Packet.from_bytearray(byte_packet)
                 except:
+                    # packet was malformed, force alignment sequence
                     logging.error("packet is malformed, maybe misaligned, trying to recover by realigning")
                     self.__connection.write(b'\xff\xff\xff\xff\xff\xff\xff\xff\xff')
                     continue
+                # packet is complete and valid
                 logging.debug("read: "+str(read_packet))
+                # catch the special case of the uC reporting free input queue spots
                 if read_packet.header() is Data32bitHeader.OUT_FREE_INSTRUCTION_SPOTS:
+                    # save the free input queue spots in the API
                     self.__free_input_queue_spots_on_uc = read_packet.value()
                     idle_write_uc = 0
+                # catch the special case of the uC reporting an malformed packet from the API
                 elif read_packet.header() is ErrorHeader.OUT_ERROR_UNKNOWN_INSTRUCTION or read_packet.header() is ErrorHeader.OUT_ERROR_UNKNOWN_CONFIGURATION:
                     logging.error("uC is reporting that it cant understand a send packet, either API and firmware are a different version or communication is not aligned, trying to recover by realigning")
                     self.__connection.write(b'\xff\xff\xff\xff\xff\xff\xff\xff\xff')
+                # normal packet, send to the read buffer for further processing by the main thread
                 else:
                     self.__read_buffer.put(read_packet)
             else:
+                # set read loop slowdown condition flag, as there is nothing to read
                 idle_read = True
             
+            # slow down the loop if there is nothing to do
             if idle_read and (idle_write_pc or idle_write_uc > 0):
                 sleep(0.000003)
                 idle_read = False

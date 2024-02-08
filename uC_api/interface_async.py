@@ -22,35 +22,59 @@ import logging, time
 
 class Interface_Async:
     def __init__(self, api_object, interface_id, direction):
-        """ 0 means not activated
-            1 means activation pending
-            2 means activted
-            -1 means error
+        """ constructor for the async interface
+            @param api_object: uC_api parent object
+            @param interface_id: id of the interface this object is responcible for
+            @param direction: "TO_CHIP" or "FROM_CHIP"
         """
+        # status of the interface
+        # 0 means not activated
+        # 1 means activation pending
+        # 2 means activted
+        # -1 means error
         self.__status = 0
         self.__status_timestamp = 0
+        # mode of the interface
+        # "4Phase_Chigh_Dhigh" means 4 phase clock with high active clock and high active data
+        # "4Phase_Clow_Dhigh" means 4 phase clock with low active clock and high active data
+        # "2Phase" means 2 phase clock with high active data
+        # "4Phase_MCP23017" means 4 phase clock with high active clock and high active data and MCP23017 port extender
+        # "NONE" means not set
         self.__mode = "NONE"
         self.__mode_timestamp = 0
+        # request pin id on the uC
         self.__req_pin = -1
         self.__req_pin_timestamp = 0
+        # ack pin id on the uC
         self.__ack_pin = -1
         self.__ack_pin_timestamp = 0
+        # data width of the interface
         self.__data_width = -1
         self.__data_width_timestamp = 0
+        # data pin ids of the interface
         self.__data_pins = [-1]*32
         self.__data_pins_timestamp = [0]*32
+        # how much the request of the handshake is delayed multiplied by 20us
         self.__req_delay = -1
         self.__req_delay_timestamp = 0
+        # data send to the chip
         self.__data_from_chip = []
         self.__data_from_chip_times = []
+        # data recived from the chip
         self.__data_to_chip = []
         self.__data_to_chip_times = []
+        # errors
         self.__errors = []
+        # the parent object
         self.__api = api_object
+        # the direction of the interface
+        # "TO_CHIP" or "FROM_CHIP"
         self.__direction = direction
+        # the human readable name of the interface
         self.__name = "ASYNC_"+direction+str(interface_id)
         if direction == "TO_CHIP":
             self.__name = "ASYNC_"+direction+str(interface_id)
+            # set the headers this object is responcible for
             if interface_id == 0:
                 self.__header = [ConfigMainHeader.IN_CONF_ASYNC_TO_CHIP0, Data32bitHeader.IN_ASYNC_TO_CHIP0]
             elif interface_id == 1:
@@ -107,46 +131,79 @@ class Interface_Async:
             "\nERRORS: "+str(self.__errors) + "\n"
 
     def header(self):
+        """ get the header this object is responcible for
+            @return: list of headers
+        """
         return self.__header
 
     def status(self):
+        """ get the human readable status of the interface
+            @return: tuple of status and timestamp
+        """
         self.update()
         state_str = ("active" if self.__status == 2 else ("activation pending" if self.__status == 1 else ("not active" if self.__status == 0 else "error" )))
         return (state_str,self.__status_timestamp)
     
     def interface_type(self):
+        """ get the human readable type of the interface
+            @return: tuple of type and timestamp of to what and when the type was actually set on the uC)
+        """
         self.update()
         return (self.__mode,self.__mode_timestamp)
 
     def data_pins(self):
+        """ get the data pins of the interface as they are on the uC
+            @return: tuple of data pins and their timestamps of to what and when the pins were actually set on the uC
+        """
         self.update()
         return (self.__data_pins[:self.__data_width],self.__data_pins_timestamp[:self.__data_width])
     
     def data_width(self):
+        """ get the data width of the interface as it is on the uC
+            @return: tuple of data width and its timestamp of to what and when the width was actually set on the uC
+        """
         self.update()
         return (self.__data_width,self.__data_width_timestamp)
     
     def req_pin(self):
+        """ get the request pin of the interface as it is on the uC
+            @return: tuple of request pin and its timestamp of to what and when the pin was actually set on the uC
+        """
         self.update()
         return (self.__req_pin,self.__req_pin_timestamp)
 
-    def ack_pin(self):
+    def ack_pin(self): 
+        """ get the ack pin of the interface as it is on the uC
+            @return: tuple of ack pin and its timestamp of to what and when the pin was actually set on the uC
+        """
         self.update()
         return (self.__ack_pin,self.__ack_pin_timestamp)
 
     def req_delay(self):
+        """ get the request delay of the interface as it is on the uC
+            @return: tuple of request delay and its timestamp of to what and when the delay was actually set on the uC
+        """
         self.update()
         return (self.__req_delay,self.__req_delay_timestamp)
 
     def data_from_chip(self):
+        """ get the data recived from the chip
+            @return: tuple of the of data list and their timestamp list - index matched
+        """
         self.update()
         return (self.__data_from_chip, data_from_chip_times)
     
     def data_to_chip(self):
+        """ get the data send to the chip when they are actually send off by the uC
+            @return: tuple of the of data list and their timestamp list (of when the uC send them) - index matched
+        """
         self.update()
         return (self.__data_to_chip, self.__data_to_chip_times)
 
     def data_from_chip_and_clear(self):
+        """ get the data recived from the chip and clear the buffer
+            @return: tuple of the of data list and their timestamp list - index matched
+        """
         self.update()
         data = self.__data_from_chip
         time = self.__data_from_chip_times
@@ -155,6 +212,9 @@ class Interface_Async:
         return (data, time)
     
     def data_to_chip_and_clear(self):
+        """ get the data send to the chip when they are actually send off by the uC and clear the buffer
+            @return: tuple of the of data list and their timestamp list (of when the uC send them) - index matched
+        """
         self.update()
         data = self.__data_to_chip
         time = self.__data_to_chip_times
@@ -163,17 +223,26 @@ class Interface_Async:
         return (data, time)
     
     def errors(self):
+        """ get the list of errors associated with this interface object
+            @return: list of errors
+        """
         self.update()
         return self.__errors
 
 
     def process_packet(self, packet):
+        """ process a packet from the uC, update the status of the interface object and store the data
+            @param packet: packet object to be processed
+        """
         if packet.header() in self.__header:
+            # process any acknolage config packet (config sucessfully set on the uC) 
             if packet.header() == self.__header[0]:
+                # interface is active
                 if packet.config_header() == ConfigSubHeader.CONF_ACTIVE:
                     self.__status = 2
                     self.__status_timestamp = packet.time()
                     return
+                # the mode of the interface
                 elif packet.config_header() == ConfigSubHeader.CONF_TYPE:
                     """@todo replace with type"""  
                     if packet.value() == 0:
@@ -188,27 +257,32 @@ class Interface_Async:
                         logging.error("unknown async type returned")
                     self.__mode_timestamp = packet.time()
                     return
+                # the ack pin of the interface
                 elif packet.config_header() == ConfigSubHeader.CONF_ACK:
                     self.__ack_pin = packet.value()
                     self.__ack_pin_timestamp = packet.time()
                     return
+                # the request pin of the interface
                 elif packet.config_header() == ConfigSubHeader.CONF_REQ:
                     self.__req_pin = packet.value()
                     self.__req_pin_timestamp = packet.time()
                     return
+                # the data width of the interface
                 elif packet.config_header() == ConfigSubHeader.CONF_WIDTH:
                     self.__data_width = packet.value()
                     self.__data_width_timestamp = packet.time()
                     return
+                # the data pins of the interface
                 elif packet.config_header() < 32:
                     self.__data_pins[packet.config_header()] = packet.value()
                     self.__data_pins_timestamp[packet.config_header()] = packet.time()
                     return
+                # the request line delay of the interface
                 elif packet.config_header() == ConfigSubHeader.CONF_REQ_DELAY:
                     self.__req_delay = packet.value()
                     self.__req_delay_timestamp = packet.time()
                     return
-                
+            # process any data packet (data send from the uC to the chip or recived from the chip)
             elif packet.header() == self.__header[1]:
                 if self.__direction == "TO_CHIP":
                     self.__data_to_chip.append(packet.value())
@@ -218,13 +292,32 @@ class Interface_Async:
                     self.__data_from_chip.append(packet.value())
                     self.__data_from_chip_times.append(packet.time())
                     return
+        # all other packets are errors or not supported, disable the interface
         self.__errors.append(str(packet))
         self.__status = -1
 
     def activate(self, req_pin, ack_pin, data_width, data_pins, mode="4Phase_Chigh_Dhigh", req_delay = 0, time = 0):
+        """ activate the interface on the uC with the given parameters
+            
+            Mode: 
+            - "4Phase_Chigh_Dhigh" means 4 phase clock with high active clock and high active data
+            - "4Phase_Clow_Dhigh" means 4 phase clock with low active clock and high active data
+            - "2Phase" means 2 phase clock with high active data
+            - "4Phase_MCP23017" means 4 phase clock with high active clock and high active data and MCP23017 port extender, pin IDs are not used in this mode
+
+            @param req_pin: request pin id on the uC
+            @param ack_pin: ack pin id on the uC
+            @param data_width: data width of the interface
+            @param data_pins: list of data pin ids on the uC
+            @param mode: mode of the interface - "4Phase_Chigh_Dhigh", "4Phase_Clow_Dhigh", "2Phase", "4Phase_MCP23017"
+            @param req_delay: how much the request of the handshake is delayed multiplied by 20us
+            @param time: the exec_time when the uc should activate the interface, 0 means as soon as possible
+        """
+        # only activate if not already activated or pending activation
         if self.__status >= 1:
             logging.warning("ASYNC_to_chip interface "+str(self.__header[0])+" is already activated or waiting activation, doing nothing")
         else:
+            # send the configuration to the uC as individual packets
             if mode == "4Phase_Chigh_Dhigh":
                 self.__api.send_packet(ConfigPacket(header = self.__header[0], config_header = ConfigSubHeader.CONF_TYPE, value = 0, time = time))
                 self.__status = 1
@@ -249,10 +342,16 @@ class Interface_Async:
             for pin in range(data_width):
                 self.__api.send_packet(ConfigPacket(header = self.__header[0], config_header = ConfigSubHeader(pin), value = data_pins[pin], time = time))
             self.__api.send_packet(ConfigPacket(header = self.__header[0], config_header = ConfigSubHeader.CONF_REQ_DELAY, value = req_delay, time = time))
+            # after all configuration is send, send activation request
             self.__api.send_packet(ConfigPacket(header = self.__header[0], config_header = ConfigSubHeader.CONF_ACTIVE, time = time))
+            # set the status to pending confirmation
             self.__status = 1
 
     def send(self, word, time = 0):
+        """ send a word to the chip
+            @param word: word to be send
+            @param time: the exec_time when the uc should send the word, 0 means as soon as possible
+        """
         self.update()
         if self.__direction == "TO_CHIP":
             if (time == 0 and self.__status == 2) or (time > 0 and self.__status >= 1):
