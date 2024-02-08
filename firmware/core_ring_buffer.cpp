@@ -220,7 +220,7 @@ void send_data_i2c(uint8_t header,uint8_t device_address_8, uint8_t register_add
     output_ring_buffer[output_ring_buffer_next_free].data_i2c.component_address = device_address_8;
     output_ring_buffer[output_ring_buffer_next_free].data_i2c.register_address = register_address;
     output_ring_buffer[output_ring_buffer_next_free].data_i2c.value_ms = value_ms;
-    output_ring_buffer[output_ring_buffer_next_free].data_i2c.value_ms = value_ls;
+    output_ring_buffer[output_ring_buffer_next_free].data_i2c.value_ls = value_ls;
     output_ring_buffer_next_free = (output_ring_buffer_next_free + 1) % OUTPUT_BUFFER_SIZE;
     interrupts();   
   } 

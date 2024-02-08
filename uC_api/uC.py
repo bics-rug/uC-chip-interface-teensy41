@@ -28,6 +28,11 @@ from .interface_spi import Interface_SPI
 from .interface_async import Interface_Async
 from queue import Queue
 
+class FIRMWARE_VERSION(enum.IntEnum):
+    FIRMWARE_VERSION_MAJOR = 0
+    FIRMWARE_VERSION_MINOR = 9
+    FIRMWARE_VERSION_PATCH = 1
+
 class uC_api:
     """ 
     the class uC_api exposes the full interface to the uC as an object, 
@@ -77,20 +82,7 @@ class uC_api:
         self.__communication_thread.start()
         # wait for 10 seconds for the uC to align
         connection = False
-        for i in range(40):
-            sleep(0.25)
-            if self.__read_buffer.empty() == False:
-                read_packet = self.__read_buffer.get()
-                self.__read_buffer.task_done()
-                if read_packet.header() == DataI2CHeader.OUT_ALIGN_SUCCESS_VERSION:
-                    logging.warning("uC is ready - firmware version: "+str(read_packet.device_address())+"."+str(read_packet.register_address())+"."+str(read_packet.value()))
-                    connection = True
-                    break
-                else:
-                    logging.warning("unknown packet received, while connecting to uC for the first time: "+str(read_packet))
-        if connection == False:
-            logging.error("uC is not responding, wrong port?")
-            self.close_connection()
+        
 
     def update_state(self):
         """update_state This method processes all availible messages from the uC and updates the internal representaion
@@ -220,6 +212,39 @@ class uC_api:
         self.__experiment_state.append(-1)
         self.__experiment_state_timestamp.append(-1)
 
+    def __check_first_connection(self):
+        """__check_first_connection checks if the uC is responding and prints the firmware version
+        """
+        logging.info("send: opening connection - aligning commuication")
+        self.__connection.write(b'\xff\xff\xff\xff\xff\xff\xff\xff\xff')
+        for i in range(40):
+            if self.__connection.in_waiting >= 9:
+                byte_packet = self.__connection.read(size = 9)
+                byte_packet = byte_packet.lstrip(b'\xff')
+                sleep(0.05)
+                if len(byte_packet) < 9:
+                    if len(byte_packet) == 0:
+                        continue
+                    elif self.__connection.in_waiting < 9-len(byte_packet):
+                            logging.error("partial packet received, but not enough bytes send by uC, trying to recover by realigning")
+                            self.__connection.write(b'\xff\xff\xff\xff\xff\xff\xff\xff\xff')
+                            continue
+                    byte_packet = bytearray(byte_packet).extend(bytearray(self.__connection.read(size = 9-len(byte_packet))))
+                read_packet = Packet.from_bytearray(byte_packet)
+                if read_packet.header() == ErrorHeader.OUT_ALIGN_SUCCESS_VERSION:
+                    logging.info("uC is ready - firmware version: "+str(read_packet.original_header())+"."+str(read_packet.original_sub_header())+"."+str(read_packet.value()))
+                    if read_packet.original_header() != FIRMWARE_VERSION.FIRMWARE_VERSION_MAJOR or read_packet.original_sub_header() != FIRMWARE_VERSION.FIRMWARE_VERSION_MINOR or read_packet.value() < FIRMWARE_VERSION.FIRMWARE_VERSION_PATCH:
+                        logging.warning("uC firmware version does not match the API version: \nfirmware version: "+str(read_packet.original_header())+"."+str(read_packet.original_sub_header())+"."+str(read_packet.value())+" \nAPI version: "+str(int(FIRMWARE_VERSION.FIRMWARE_VERSION_MAJOR))+"."+str(int(FIRMWARE_VERSION.FIRMWARE_VERSION_MINOR))+"."+str(int(FIRMWARE_VERSION.FIRMWARE_VERSION_PATCH)))
+                    connection = True
+                    return True
+                else:
+                    logging.warning("unknown packet received, while connecting to uC for the first time: "+str(read_packet))
+            sleep(0.25)
+
+        if connection == False:
+            logging.error("uC is not responding for 10 sec, wrong port?, no permission?")
+            return False
+
 
     def __thread_function(self):
         """__thread_function internal function managing the actual async communication with the uC in the background
@@ -228,8 +253,10 @@ class uC_api:
         idle_write_uc = 0
         idle_read = False
         # init communication by forcing the uC to align
-        logging.info("send: aligning commuication")
-        self.__connection.write(b'\xff\xff\xff\xff\xff\xff\xff\xff\xff')
+        if not self.__check_first_connection():
+            self.__connection.close()
+            return
+
         # start communication
         while True:
             if not self.__write_buffer_timed.empty() or not self.__write_buffer.empty():
@@ -272,7 +299,7 @@ class uC_api:
                             logging.error("partial packet received, but not enough bytes send by uC, trying to recover by realigning")
                             self.__connection.write(b'\xff\xff\xff\xff\xff\xff\xff\xff\xff')
                             continue
-                        byte_packet = bytearray(byte_packet).append(self.__connection.read(size = 9-len(byte_packet)))
+                        byte_packet = bytearray(byte_packet).extend(bytearray(self.__connection.read(size = 9-len(byte_packet))))
                         
                     else:
                         logging.debug("alignment triggered shifted by "+str(len(byte_packet))+ " bytes")

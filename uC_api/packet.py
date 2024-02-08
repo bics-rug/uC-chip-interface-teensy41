@@ -155,7 +155,7 @@ class DataI2CPacket(Packet):
 
     def set_value(self, value):
         if (value < 2**16 and value >= 0 and isinstance(value, int)):
-            self._value_ls=value & 0xF
+            self._value_ls = value & 0xF
             self._value_ms= value >> 8
         else:
             logging.error("value "+str(value)+" is not a valid unsigned integer of 2 byte")
@@ -180,7 +180,7 @@ class DataI2CPacket(Packet):
         return struct.pack("<BIBBBB", self._header, self._exec_time, self._device_address<<1+self._read ,self._register_address,self._value_ms,self._value_ls)
     
     def __str__(self):
-        return "[Packet]: data i2c: header = "+ str(self._header) +",device_address = "+ str(self._device_address) +",register address = "+ str(self._register_address) +",read = "+ str(self._read) +", value = "+ str(self._value_ls+self._value_ms<<8) + ", at time = "+ str(self._exec_time) +"us"
+        return "[Packet]: data i2c: header = "+ str(self._header) +",device_address = "+ str(self._device_address) +",register address = "+ str(self._register_address) +",read = "+ str(self._read) +", value = "+ str(self._value_ls+(self._value_ms<<8)) + ", at time = "+ str(self._exec_time) +"us"
     
     @classmethod
     def from_bytearray(self, byte_array):
@@ -191,9 +191,11 @@ class DataI2CPacket(Packet):
         @raise Exception: if package construction fails
         """
         unpacked = struct.unpack("<BIBBBB", byte_array)
+        print(unpacked)
+        print((unpacked[4] << 8) | unpacked[5])
         return DataI2CPacket(header=DataI2CHeader(unpacked[0]),
         device_address=unpacked[2]>>1,
-        register_address=unpacked[3], read=unpacked[2] & 0x1, value=unpacked[4]<<8+unpacked[5],
+        register_address=unpacked[3], read=unpacked[2] & 0x1, value=((unpacked[4] << 8) | unpacked[5]),
         time = unpacked[1])
 
 
@@ -314,19 +316,27 @@ class ConfigPacket(Packet):
 
 class ErrorPacket(Packet): 
 
-    def __init__(self, header, original_header, value=0, print_errors=True):
+    def __init__(self, header, original_header, value=0, orignal_sub_header=0, skip_header_matching=False, print_errors=True):
         self.set_header(header)
-        self.set_org_header(original_header)
-        self.set_value(value)
-
-        if (print_errors):
-            logging.error(self.__str__())
+        if self._header == ErrorHeader.OUT_ALIGN_SUCCESS_VERSION:
+            self.set_org_header(original_header, True)
+            self.set_value(value)
+            self.set_org_sub_header(orignal_sub_header, True)
+        else:
+            self.set_org_header(original_header)
+            self.set_org_sub_header(original_sub_header)
+            self.set_value(value)
+            if (print_errors):
+                logging.error(self.__str__())
 
     def value(self):
         return self._value
 
     def original_header(self):
         return self._org_header
+    
+    def original_sub_header(self):
+        return self._org_sub_header
 
     def set_header(self, header):
         if (header in ErrorHeader):
@@ -334,25 +344,52 @@ class ErrorPacket(Packet):
         else:
             logging.error("header "+str(header)+" is not a valid header")
             
-    def set_org_header(self, header):
-        try:
-            self._org_header = Data32bitHeader(header);
-        except ValueError:
+    def set_org_header(self, header, skip_header_matching=False):
+        if skip_header_matching:
+            self._org_header = header
+        else:
             try:
-                self._org_header = DataI2CHeader(header);
+                self._org_header = Data32bitHeader(header);
             except ValueError:
                 try:
-                    self._org_header = PinHeader(header);
+                    self._org_header = DataI2CHeader(header);
                 except ValueError:
                     try:
-                        self._org_header = ConfigMainHeader(header);
+                        self._org_header = PinHeader(header);
                     except ValueError:
                         try:
-                            self._org_header = ErrorHeader(header);
+                            self._org_header = ConfigMainHeader(header);
                         except ValueError:
-                            logging.error("source Header "+ str(header) +" is not a valid header,")
-                            self._org_header = None;
-    
+                            try:
+                                self._org_header = ErrorHeader(header);
+                            except ValueError:
+                                logging.error("source Header "+ str(header) +" is not a valid header,")
+                                self._org_header = None;
+
+    def set_org_sub_header(self, header,skip_header_matching=False):
+        if skip_header_matching:
+            self._org_sub_header = header
+        else:
+            try:
+                self._org_sub_header = ConfigSubHeader(header);
+            except ValueError:
+                try:
+                    self._org_sub_header = Data32bitHeader(header);
+                except ValueError:
+                    try:
+                        self._org_sub_header = DataI2CHeader(header);
+                    except ValueError:
+                        try:
+                            self._org_sub_header = PinHeader(header);
+                        except ValueError:
+                            try:
+                                self._org_sub_header = ConfigMainHeader(header);
+                            except ValueError:
+                                try:
+                                    self._org_sub_header = ErrorHeader(header);
+                                except ValueError:
+                                    logging.error("source Sub Header "+ str(header) +" is not a valid header,")
+                                    self._org_sub_header = None;
 
 
     def set_value(self, value):
@@ -364,7 +401,7 @@ class ErrorPacket(Packet):
         return "[uC Error]: "+ str(self._header) +" caused by "+ str(self._org_header)+ " with value "+ str(self._value)
 
     def to_bytearray(self):
-        return struct.pack("<BBIBBB", self._header, self._org_header, self._value,0,0,0)
+        return struct.pack("<BBIBBB", self._header, self._org_header, self._value,self._org_sub_header,0,0)
 
     @classmethod
     def from_bytearray(self, byte_array):
@@ -377,5 +414,6 @@ class ErrorPacket(Packet):
         unpacked = struct.unpack("<BBIBBB", byte_array)
         return ErrorPacket(header=ErrorHeader(unpacked[0]),
         original_header = unpacked[1],
-        value = unpacked[2])
+        value = unpacked[2],
+        orignal_sub_header = unpacked[3])
 

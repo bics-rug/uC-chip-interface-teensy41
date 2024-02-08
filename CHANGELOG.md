@@ -10,9 +10,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - code documentation
 - check of comunication with uC while starting, error on no connection
+- warn on api and firmware version missmatch
 - sends firmware version on aligning connection
 ### Fixed
  - trys to recover from misaligned communication if the byte sequence goes out of sync
+ - data_i2c package fixed faulty value transmission (firmware) and encoding (api)
 
 ### Changed
 
