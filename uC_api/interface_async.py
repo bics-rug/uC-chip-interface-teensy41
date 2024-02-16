@@ -188,6 +188,7 @@ class Interface_Async:
 
     def data_from_chip(self):
         """ get the data recived from the chip
+            will retun 2 lists: one with the word recoded and one with the time when it was recorded, linked by index
             @return: tuple of the of data list and their timestamp list - index matched
         """
         self.update()
@@ -195,6 +196,13 @@ class Interface_Async:
     
     def data_to_chip(self):
         """ get the data send to the chip when they are actually send off by the uC
+            data_to_chip will retun the data send by the uC to the device under test (DUT)
+
+            will retun 2 lists: one with the word send and one with the exact time when it was send, linked by index
+
+            the time might differ slightly from the time you sheduled the send word, 
+            as it is the time when it was send out and the uC can only send one word at a time
+            
             @return: tuple of the of data list and their timestamp list (of when the uC send them) - index matched
         """
         self.update()
@@ -202,6 +210,8 @@ class Interface_Async:
 
     def data_from_chip_and_clear(self):
         """ get the data recived from the chip and clear the buffer
+            will retun 2 lists: one with the word recoded and one with the time when it was recorded, linked by index
+
             @return: tuple of the of data list and their timestamp list - index matched
         """
         self.update()
@@ -213,6 +223,13 @@ class Interface_Async:
     
     def data_to_chip_and_clear(self):
         """ get the data send to the chip when they are actually send off by the uC and clear the buffer
+            data_to_chip will retun the data send by the uC to the device under test (DUT)
+
+            will retun 2 lists: one with the word send and one with the exact time when it was send, linked by index
+
+            the time might differ slightly from the time you sheduled the send word, 
+            as it is the time when it was send out and the uC can only send one word at a time
+
             @return: tuple of the of data list and their timestamp list (of when the uC send them) - index matched
         """
         self.update()

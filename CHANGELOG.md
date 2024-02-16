@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- code documentation -
+- code documentation --
 - check of comunication with uC while starting, error on no connection
 - warn on api and firmware version missmatch
 - sends firmware version on aligning connection

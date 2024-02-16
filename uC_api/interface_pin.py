@@ -163,20 +163,27 @@ class Interface_PIN:
             "\nERRORS: "+str(self.__errors) + "\n"
 
     def process_packet(self, packet):
+        """ process packets arriving for this interface, updates the internal state and stores the data
+        @param packet: the packet to process 
+        """
         if packet.header() in self.__header:
+            # configuration acknolagment
             if packet.header() == self.__header[0]:
+                # input
                 if packet.config_header() == ConfigSubHeader.CONF_INPUT:
                     self.__status = 2
                     self.__status_timestamp = packet.time()
                     self.__type = "INPUT"
                     self.__type_timestamp = packet.time()
                     return
+                # output
                 elif packet.config_header() == ConfigSubHeader.CONF_OUTPUT:
                     self.__status = 2
                     self.__status_timestamp = packet.time()
                     self.__type = "OUTPUT"
                     self.__type_timestamp = packet.time()
                     return
+            # data to store
             elif packet.header() == self.__header[1] and packet.pin_id() == self.__pin_id:
                 self.__data_to_chip.append(packet.value())
                 self.__data_to_chip_times.append(packet.time())
@@ -196,6 +203,11 @@ class Interface_PIN:
 
 
     def activate(self, pin_mode="OUTPUT", interval=0, time=0):
+        """ activate the pin with the given mode and interval
+            @param pin_mode: the mode of the pin, can be "INPUT", "OUTPUT" and future "PWM", "ANALOG_INPUT", "ANALOG_OUTPUT"
+            @param interval: the interval for the pin, not yet implemented
+            @param time: the time when the activation should be done, 0 means as soon as possible
+        """
         if self.__status >= 1:
             logging.warning("Pin "+str(self.__pin_id)+" is already activated or waiting activation, doing nothing")
         else:
@@ -211,6 +223,7 @@ class Interface_PIN:
                 self.__type_pending = pin_mode
                 sleep(0.001)
                 return
+            # in the future implement the following
             elif pin_mode == "PWM":
                 logging.warning("pin mode not implmented yet")
             elif pin_mode == "ANALOG_INPUT":
@@ -223,7 +236,12 @@ class Interface_PIN:
         
 
     def send(self, value, time = 0):
+        """ set the corresponding pin to the given value at the given time
+            @param value: the value to set the pin to, 0 or 1
+            @param time: the time when the value should be set, 0 means as soon as possible
+        """
         self.__api.update_state()
+        # only precede if the pin is activated or pending activation for timed events
         if (time == 0 and self.__status == 2 and (self.__type == "OUTPUT" or self.__type == "ANALOG_OUTPUT")) or (time > 0 and self.__status >= 1 and (self.__type_pending == "OUTPUT" or self.__type_pending == "ANALOG_OUTPUT")):
             self.__api.send_packet(PinPacket(header = self.__header[1],pin_id=self.__pin_id , value = value, time = time))
         else:
@@ -231,4 +249,6 @@ class Interface_PIN:
 
 
     def update(self):
+        """ update the internal state representation of the pin object
+        """
         self.__api.update_state()
