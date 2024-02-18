@@ -8,6 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+
+### Fixed
+
+### Changed
+
+### Removed
+
+### Deprecated
+
+## [0.9.1] - 2024-02-18
+
+### Added
 - code documentation --
 - check of comunication with uC while starting, error on no connection
 - warn on api and firmware version missmatch
@@ -17,11 +29,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
  - data_i2c package fixed faulty value transmission (firmware) and encoding (api)
  - typo in packet, variable visibility in thread
 
-### Changed
-
-### Removed
-
-### Deprecated
 
 ## [0.9.0] - 2023-10-13
 
