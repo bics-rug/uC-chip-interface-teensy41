@@ -435,12 +435,12 @@ class ErrorPacket(Packet):
     """ The ErrorPacket is used by the uC to send errors to the API
         all availible errors are defined in the ErrorHeader
     """
-    def __init__(self, header, original_header, value=0, orignal_sub_header=0, skip_header_matching=False, print_errors=True):
+    def __init__(self, header, original_header, value=0, original_sub_header=0, skip_header_matching=False, print_errors=True):
         """ constructor for the ErrorPacket
         @param header: (ErrorHeader or uint8) the header indicating the error
         @param original_header: (uint_8) the original header of the packet causing the error
         @param value: (uint_32) the value associated (optional, default = 0)
-        @param orignal_sub_header: (uint_8) the original sub header causeing the error (optional, default = 0) in case of a config 
+        @param original_sub_header: (uint_8) the original sub header causeing the error (optional, default = 0) in case of a config 
         @param skip_header_matching: (bool) if the causing headers should be converted into human readable objects (optional, default = False)
         @param print_errors: (bool) if the error should be logged (optional, default = True)
         """
@@ -448,7 +448,7 @@ class ErrorPacket(Packet):
         if self._header == ErrorHeader.OUT_ALIGN_SUCCESS_VERSION:
             self.set_org_header(original_header, True)
             self.set_value(value)
-            self.set_org_sub_header(orignal_sub_header, True)
+            self.set_org_sub_header(original_sub_header, True)
         else:
             self.set_org_header(original_header)
             self.set_org_sub_header(original_sub_header)
@@ -570,5 +570,5 @@ class ErrorPacket(Packet):
         return ErrorPacket(header=ErrorHeader(unpacked[0]),
         original_header = unpacked[1],
         value = unpacked[2],
-        orignal_sub_header = unpacked[3])
+        original_sub_header = unpacked[3])
 

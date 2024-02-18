@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
  - trys to recover from misaligned communication if the byte sequence goes out of sync
  - data_i2c package fixed faulty value transmission (firmware) and encoding (api)
+ - typo in packet, variable visibility in thread
 
 ### Changed
 
