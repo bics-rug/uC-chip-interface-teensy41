@@ -25,6 +25,7 @@ import enum
   - configure Interfaces
 """
 
+
 """
 for simplisity Commands use the Data32bitPacket class
 with value field empty
@@ -819,3 +820,39 @@ class ConfigSubHeader(enum.IntEnum):
     CONF_CHANNEL30 = 30, "setting the pin for Async data channel"
     CONF_CHANNEL31 = 31, "setting the pin for Async data channel"
 
+
+"""
+the 2 packets are used to align the communication between the PC and the uC
+"""
+ALIGN_BYTEARRAY = b'\xff\xff\xff\xff\xff\xff\xff\xff\xff\xfd\x00\x00\x00\x00\x00\x00\x00\x00'
+
+"""
+list of headers that should be logged on arrival
+errors are logged by default
+"""
+LOGGING_WARNING_LIST = [Data32bitHeader.IN_RESET]
+LOGGING_INFO_LIST = []
+
+def subscribe_warning(header):
+    """
+    add a header to the list of logged warnings
+    """
+    LOGGING_WARNING_LIST.append(header)
+
+def unsubscribe_warning(header):
+    """
+    remove a header from the list of logged warnings
+    """
+    LOGGING_WARNING_LIST.remove(header)
+
+def subscribe_info(header):
+    """
+    add a header to the list of logged info
+    """
+    LOGGING_INFO_LIST.append(header)
+
+def unsubscribe_info(header):
+    """
+    remove a header from the list of logged info
+    """
+    LOGGING_INFO_LIST.remove(header)

@@ -30,6 +30,7 @@ class Packet:
     def __init__(self):
         self._header = 0
         self._exec_time = 0
+        self.check_and_log()
     
     @classmethod
     def from_bytearray(cls, byte_array):
@@ -110,6 +111,17 @@ class Packet:
         """
         logging.warning("the method to_bytearray needs to be implemented by the child class")
 
+    def check_and_log(self):
+        """check_and_log 
+        logs the packet if the header is in the logging lists
+        """
+        if self._header in LOGGING_WARNING_LIST:
+            logging.warning(str(self))
+        if self._header in LOGGING_INFO_LIST:
+            logging.info(str(self))
+        #if self._header in LOGGING_ERROR_LIST:
+        #    logging.error(str(self))
+
 class Data32bitPacket(Packet): 
     """ The Data32bitPacket is used to send 32bit data instructions to the uC
         all availible instructions are defined in the Data32bitHeader  
@@ -124,6 +136,7 @@ class Data32bitPacket(Packet):
         self.set_header(header)
         self.set_value(value)
         self.set_exec_time(time)
+        self.check_and_log()
 
     def value(self):
         """ getter method for the value attribute
@@ -175,6 +188,7 @@ class DataI2CPacket(Packet):
         self.set_device_address(device_address)
         self.set_register_address(register_address)
         self.set_read(read)
+        self.check_and_log()
 
     def value(self):
         """ getter method for the value attribute
@@ -288,6 +302,7 @@ class PinPacket(Packet):
         self.set_pin_id(pin_id)
         self.set_value(value)
         self.set_exec_time(time)
+        self.check_and_log()
     
     def pin_id(self):
         """ getter method for the pin_id attribute
@@ -366,6 +381,7 @@ class ConfigPacket(Packet):
         self.set_config_header(config_header)
         self.set_value(value)
         self.set_exec_time(time)
+        self.check_and_log()
 
     def value(self):
         """ getter method for the value attribute
@@ -455,6 +471,7 @@ class ErrorPacket(Packet):
             self.set_value(value)
             if (print_errors):
                 logging.error(self.__str__())
+        self.check_and_log()
 
     def value(self):
         """ getter method for the value attribute

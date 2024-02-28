@@ -34,7 +34,7 @@ class FIRMWARE_VERSION(enum.IntEnum):
     """
     FIRMWARE_VERSION_MAJOR = 0
     FIRMWARE_VERSION_MINOR = 9
-    FIRMWARE_VERSION_PATCH = 1
+    FIRMWARE_VERSION_PATCH = 2
 
 class uC_api:
     """ 
@@ -66,7 +66,6 @@ class uC_api:
         self.__write_buffer_timed = Queue()
         self.__write_buffer = Queue()
         self.__communication_thread = threading.Thread(target=self.__thread_function, args=(serial_port_path,))
-        self.__free_input_queue_spots_on_uc = -1
         self.__last_timed_packet = 0
         self.__api_level = api_level
         if api_level == 2:
@@ -133,6 +132,16 @@ class uC_api:
             if no_match:
                 self.errors.append(str(packet_to_process))
                 self.__read_buffer.task_done()
+
+    def __str__(self):
+        self.update_state()
+        return "UC" + \
+            "\nExperiment state: " + str(self.__experiment_state) + \
+            "\nExperiment state timestamp: " + str(self.__experiment_state_timestamp) + \
+            "\nlast timed packet: " + str(self.__last_timed_packet) + \
+            "\nfree input queue spots on uC: " + str(free_input_queue_spots_on_uc ) + \
+            "\napilevel: " + str(self.__api_level) + \
+            "\nERRORS: "+str(self.errors) + "\n"
 
     def start_experiment(self):
         """start_experiment This will reset the uC clock, enable that data is collected and that timed instructions are executed by the uC
@@ -234,9 +243,10 @@ class uC_api:
         """__check_first_connection checks if the uC is responding and prints the firmware version
         if the firmware version does not match the API version it will print a warning
         """
+        connection_state = False
         logging.info("send: opening connection - aligning commuication")
         # write 9 bytes to the uC to align the communication
-        connection.write(b'\xff\xff\xff\xff\xff\xff\xff\xff\xff')
+        connection.write(ALIGN_BYTEARRAY)
         # wait for 10 seconds for the uC to align
         for i in range(40):
             # check if the uC has send a packet
@@ -253,7 +263,7 @@ class uC_api:
                     elif connection.in_waiting < 9-len(byte_packet):
                         # something went wrong, try again
                         logging.error("partial packet received, but not enough bytes send by uC, trying to recover by realigning")
-                        connection.write(b'\xff\xff\xff\xff\xff\xff\xff\xff\xff')
+                        connection.write(ALIGN_BYTEARRAY)
                         continue
                     # complete partial packet
                     else:
@@ -285,6 +295,12 @@ class uC_api:
         idle_write_pc = False
         idle_write_uc = 0
         idle_read = False
+        free_input_queue_spots_on_uc  = -1
+        last_sent_time = 0
+        last_free_spots = 0
+        packet_send = 0
+        exec_running = 0
+        request_free_input_queue_spots = False
         connection = serial.Serial(serial_port_path,115200, timeout= None, write_timeout=0) #its USB so the speed setting gets ignored and it runes at max speed
         # init communication by forcing the uC to align
         if not self.__check_first_connection(connection):
@@ -312,76 +328,106 @@ class uC_api:
                 # then write the timed packets
                 else:
                     # check if there is space in the uC input queue
-                    if self.__free_input_queue_spots_on_uc > 0 :
+                    if free_input_queue_spots_on_uc  > 0 :
                         # send the packet and decrease the free input queue spots reference in the API
                         data_packet = self.__write_buffer_timed.get()
-                        self.__free_input_queue_spots_on_uc -= 1
+                        free_input_queue_spots_on_uc  -= 1
                         connection.write(data_packet.to_bytearray())
+                        last_sent_time = data_packet.time()
+                        packet_send += 1
                         logging.debug("send timed: "+str(data_packet))
                         self.__write_buffer_timed.task_done()
                     else:
                         # request the free input queue spots from the uC, 
-                        # first request is send instantly, then every 2000th loop run through
+                        # first request is send instantly, then every 200th loop run through
                         # to not overload the uC with requests, uC will also report the free input
                         # queue spots when it frees up space and the queue was full before
                         idle_write_uc += 1
-                        if idle_write_uc%2000 == 1:
-                            packet_to_send = Data32bitPacket(Data32bitHeader.IN_FREE_INSTRUCTION_SPOTS)
-                            connection.write(packet_to_send.to_bytearray())
-                            logging.debug("send timed: "+str(packet_to_send))
+                        if idle_write_uc%200 == 1:
+                            if request_free_input_queue_spots == False:
+                                request_free_input_queue_spots = True
+                                packet_to_send = Data32bitPacket(Data32bitHeader.IN_FREE_INSTRUCTION_SPOTS)
+                                connection.write(packet_to_send.to_bytearray())
+                                logging.debug("send request: "+str(packet_to_send))
             else:
                 # set write loop slowdown condition flag
                 idle_write_pc = True
 
-            # check if there is a package to read from the serial connection
-            if connection.in_waiting >= 9:
-                idle_read = False
-                byte_packet = connection.read(size = 9)
-                # remove alignment bytes
-                byte_packet = byte_packet.lstrip(b'\xff')
-                # check if the packet is complete
-                if len(byte_packet) < 9:
-                    if len(byte_packet) != 0:
-                        #initiate alignment for incompleate packets
-                        logging.warning("outgoing uC alignment needed, shifted by "+str(len(byte_packet))+ " bytes")
-                        # partial packet not recoverable
-                        if connection.in_waiting < 9-len(byte_packet):
-                            logging.error("partial packet received, but not enough bytes send by uC, trying to recover by realigning")
-                            connection.write(b'\xff\xff\xff\xff\xff\xff\xff\xff\xff')
+            # check if there is a package to read from the serial connection, 
+            # read 20 packages under the assumption that the pc is faster and
+            # the uC will send more packages 
+            # stops if there is nothing to read
+            for i in range(20):
+                if connection.in_waiting >= 9:
+                    idle_read = False
+                    byte_packet = connection.read(size = 9)
+                    # remove alignment bytes
+                    byte_packet = byte_packet.lstrip(b'\xff')
+                    # check if the packet is complete
+                    if len(byte_packet) < 9:
+                        if len(byte_packet) != 0:
+                            #initiate alignment for incompleate packets
+                            logging.warning("outgoing uC alignment needed, shifted by "+str(len(byte_packet))+ " bytes")
+                            # partial packet not recoverable
+                            if connection.in_waiting < 9-len(byte_packet):
+                                logging.error("partial packet received, but not enough bytes send by uC, trying to recover by realigning")
+                                connection.write(ALIGN_BYTEARRAY)
+                                continue
+                            # to complete partial packet
+                            byte_packet = bytearray(byte_packet).extend(bytearray(connection.read(size = 9-len(byte_packet))))
+
+                        else:
+                            logging.debug("alignment sucesss - no incoming alignment error")
+                            # no packet, jump to next iteration
                             continue
-                        # to complete partial packet
-                        byte_packet = bytearray(byte_packet).extend(bytearray(connection.read(size = 9-len(byte_packet))))
-                        
-                    else:
-                        logging.debug("alignment sucesss - no incoming alignment error")
-                        # no packet, jump to next iteration
+                    # is now aligned
+                    try:
+                        # convert the byte packet to a packet object
+                        read_packet = Packet.from_bytearray(byte_packet)
+                    except:
+                        # packet was malformed, force alignment sequence
+                        logging.error("packet is malformed, maybe misaligned, trying to recover by realigning")
+                        connection.write(ALIGN_BYTEARRAY)
                         continue
-                # is now aligned
-                try:
-                    # convert the byte packet to a packet object
-                    read_packet = Packet.from_bytearray(byte_packet)
-                except:
-                    # packet was malformed, force alignment sequence
-                    logging.error("packet is malformed, maybe misaligned, trying to recover by realigning")
-                    connection.write(b'\xff\xff\xff\xff\xff\xff\xff\xff\xff')
-                    continue
-                # packet is complete and valid
-                logging.debug("read: "+str(read_packet))
-                # catch the special case of the uC reporting free input queue spots
-                if read_packet.header() is Data32bitHeader.OUT_FREE_INSTRUCTION_SPOTS:
-                    # save the free input queue spots in the API
-                    self.__free_input_queue_spots_on_uc = read_packet.value()
-                    idle_write_uc = 0
-                # catch the special case of the uC reporting an malformed packet from the API
-                elif read_packet.header() is ErrorHeader.OUT_ERROR_UNKNOWN_INSTRUCTION or read_packet.header() is ErrorHeader.OUT_ERROR_UNKNOWN_CONFIGURATION:
-                    logging.error("uC is reporting that it cant understand a send packet, either API and firmware are a different version or communication is not aligned, trying to recover by realigning")
-                    connection.write(b'\xff\xff\xff\xff\xff\xff\xff\xff\xff')
-                # normal packet, send to the read buffer for further processing by the main thread
+                    # packet is complete and valid
+                    logging.debug("read: "+str(read_packet))
+                    # catch the special case of the uC reporting free input queue spots
+                    if read_packet.header() is Data32bitHeader.OUT_FREE_INSTRUCTION_SPOTS:
+                        # save the free input queue spots in the API
+                        if read_packet.time() > last_sent_time and exec_running > 0:
+                            logging.warning("Timing exec squewed, increase buffer size in firmware, last sent time: "+\
+                                str(last_sent_time)+" uC time: "+str(read_packet.time())+\
+                                    "\npackets send: "+str(packet_send)+" for free spots: "+str(last_free_spots))    
+                        else:
+                            logging.debug("uC reports "+str(read_packet.value())+" free input queue spots at time "+\
+                                str(read_packet.time())+"\nwaiting on PC: "+str(self.__write_buffer_timed.qsize())+\
+                                    " with time starting from: "+str(last_sent_time)+\
+                                    "\npackets send: "+str(packet_send)+" for free spots: "+str(last_free_spots))
+                        last_free_spots = read_packet.value()
+                        packet_send = 0
+                        # set one less then availible, because of bug the pc will send to much
+                        free_input_queue_spots_on_uc  = read_packet.value()
+                        if free_input_queue_spots_on_uc == 0:
+                            idle_write_uc = 2
+                        else:
+                            idle_write_uc = 0
+                        request_free_input_queue_spots = False
+                    # catch the special case of the uC reporting an malformed packet from the API
+                    elif read_packet.header() is ErrorHeader.OUT_ERROR_UNKNOWN_INSTRUCTION or read_packet.header() is ErrorHeader.OUT_ERROR_UNKNOWN_CONFIGURATION:
+                        logging.error("uC is reporting that it cant understand a send packet, either API and firmware are a different version or communication is not aligned, trying to recover by realigning")
+                        connection.write(ALIGN_BYTEARRAY)
+                    # keep track of the experiment state, so we know when to issue a warning for execution time squew
+                    elif read_packet.header() == Data32bitHeader.IN_SET_TIME:
+                        exec_running = read_packet.value()
+                        logging.info("Experiment state changed to: "+str(exec_running))
+                        self.__read_buffer.put(read_packet)
+                    # normal packet, send to the read buffer for further processing by the main thread
+                    else:
+                        self.__read_buffer.put(read_packet)
                 else:
-                    self.__read_buffer.put(read_packet)
-            else:
-                # set read loop slowdown condition flag, as there is nothing to read
-                idle_read = True
+                    # set read loop slowdown condition flag, as there is nothing to read
+                    idle_read = True
+                    break
             
             # slow down the loop if there is nothing to do
             if idle_read and (idle_write_pc or idle_write_uc > 0):

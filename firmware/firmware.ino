@@ -28,11 +28,7 @@
 #include "core_instruction_exec.h"
 //#include <avr/wdt.h>
 
-enum firmware_version : uint8_t {
-  VERSION_MAJOR = 0U,
-  VERSION_MINOR = 9U,
-  VERSION_PATCH = 1U,
-};
+
 
 /*
  This programm is supposed to be used for interfacing with small Async or Neuromorphic chips,
@@ -93,33 +89,22 @@ void loop() {
       Serial.readBytes(&(current_instruction.bytes[position]), 1);
       // check if the PC reqests a communication protocol alignment by writing 9 bytes 
       // of IN_ALIGN_COMMUNICATION_PROTOCOL (255) so that uC catches one of them as a header
-      if (position == 0 && current_instruction.bytes[position] == IN_ALIGN_COMMUNICATION_PROTOCOL){
+      if (position == 0 && current_instruction.bytes[0] == IN_ALIGN_COMMUNICATION_PROTOCOL){
         do {
           Serial.readBytes(&(current_instruction.bytes[0]), 1);
-        } while (current_instruction.bytes[position] != IN_ALIGN_COMMUNICATION_PROTOCOL);
+        } while (current_instruction.bytes[0] == IN_ALIGN_COMMUNICATION_PROTOCOL);
         uint8_t position_out;
         for (position_out = 0; position_out < sizeof(packet_t); position_out++) Serial.write(IN_ALIGN_COMMUNICATION_PROTOCOL);
-        error_message_bypass_buffer(OUT_ALIGN_SUCCESS_VERSION, VERSION_MAJOR, VERSION_PATCH, VERSION_MINOR);
       }
     }
 
     // exec instruction if exec_time == 0
+     // else if instruction buffer is not full store instruction
     if (current_instruction.data.exec_time == 0) {
       exec_instruction(&current_instruction, false);
     }
-
-    // if instruction buffer is not full store instruction
-    else if (input_ring_buffer_start != (input_ring_buffer_next_free + 1) % INPUT_BUFFER_SIZE) {
-      noInterrupts();
-      copy_packet(&current_instruction,&input_ring_buffer[input_ring_buffer_next_free]);
-      //input_ring_buffer[input_ring_buffer_next_free] = current_instruction;
-      input_ring_buffer_next_free = (input_ring_buffer_next_free + 1) % INPUT_BUFFER_SIZE;
-      interrupts();
-    }
-
-    // if instruction buffer is full send error, error_message not used because send without que
     else {
-      error_message_bypass_buffer(OUT_ERROR_INPUT_FULL,current_instruction.data.header,current_instruction.data.value);
+      add_input_packet(&current_instruction);
     }
   }
   

@@ -19,6 +19,12 @@
 #ifndef UC_BOARDS_H
 #define UC_BOARDS_H
 
+enum firmware_version : uint8_t {
+  VERSION_MAJOR = 0U,
+  VERSION_MINOR = 9U,
+  VERSION_PATCH = 2U,
+};
+
 #if defined(ARDUINO_TEENSY41) 
 
 #define INPUT_BUFFER_SIZE 4096

@@ -107,6 +107,8 @@ bool is_output_buffer_not_full(){
   else  {
     noInterrupts();
     uint16_t index = output_ring_buffer_next_free == 0 ? OUTPUT_BUFFER_SIZE-1 : output_ring_buffer_next_free-1;
+    output_ring_buffer[index].error.header = OUT_ERROR_OUTPUT_FULL;
+    output_ring_buffer[index].error.org_header = OUT_ERROR_OUTPUT_FULL;
     output_ring_buffer[index].error.value++;
     loop_runs_without_gpio_interrups +=5;
     disable_gpio_interrupt();
@@ -115,22 +117,53 @@ bool is_output_buffer_not_full(){
   }
 }
 
+bool is_input_buffer_not_full(){
+  uint32_t free_spots = 0;
+  noInterrupts();
+  if (input_ring_buffer_start > input_ring_buffer_next_free){
+    free_spots = input_ring_buffer_start-input_ring_buffer_next_free-1;
+  }
+  else{
+    free_spots = INPUT_BUFFER_SIZE-input_ring_buffer_next_free+input_ring_buffer_start-1;
+  }
+  interrupts();
+  if (free_spots == 0) return false;
+  else return true;
+}
+
 void send_input_ring_buffer_free_spots(){
   packet_t data_packet;
   data_packet.data.header = OUT_FREE_INSTRUCTION_SPOTS;
   data_packet.data.exec_time = micros()-offset_time;
+  uint32_t free_spots = 0;
+  noInterrupts();
   if (input_ring_buffer_start > input_ring_buffer_next_free){
-    data_packet.data.value = input_ring_buffer_start-input_ring_buffer_next_free-1;
+    free_spots = input_ring_buffer_start-input_ring_buffer_next_free-1;
   }
   else{
-    data_packet.data.value = INPUT_BUFFER_SIZE-input_ring_buffer_next_free+input_ring_buffer_start-1;
+    free_spots = INPUT_BUFFER_SIZE-input_ring_buffer_next_free+input_ring_buffer_start-1;
   }
+  interrupts();
+  data_packet.data.value = free_spots;
   uint8_t position;
   // due to different storage alignment need to write data bytes individual
   for (position = 0; position < sizeof(packet_t); position++) Serial.write(data_packet.bytes[position]);
   //send confirmation
   send_data32(IN_FREE_INSTRUCTION_SPOTS,0,true);
 
+}
+
+void add_input_packet(packet_t* input_packet){
+  if (is_input_buffer_not_full()){
+    noInterrupts();
+    copy_packet(input_packet,&input_ring_buffer[input_ring_buffer_next_free]);
+    input_ring_buffer_next_free = (input_ring_buffer_next_free + 1) % INPUT_BUFFER_SIZE;
+    interrupts();   
+  }
+  // if instruction buffer is full send error, error_message not used because send without que
+  else {
+      error_message_bypass_buffer(OUT_ERROR_INPUT_FULL,input_packet->data.header,input_packet->data.value);
+  }
 }
 
 void send_output_ring_buffer(){

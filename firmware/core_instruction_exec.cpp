@@ -16,6 +16,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 #include "core_instruction_exec.h"
+#include "uc_boards.h"
 #include <Arduino.h>
 //#include <avr/wdt.h>
 
@@ -76,6 +77,7 @@ void exec_instruction(packet_t* instruction, bool is_ISR_call) {
   case IN_CONF_READ_ON_REQUEST: set_read_on_request(instruction->config.value); break;
   case IN_RESET://wdt_enable(WDTO_15MS); 
       reset_uC(); break;
+  case OUT_ALIGN_SUCCESS_VERSION: error_message_bypass_buffer(OUT_ALIGN_SUCCESS_VERSION, VERSION_MAJOR, VERSION_PATCH, VERSION_MINOR); break;
   default:   
     if (is_ISR_call) error_message(OUT_ERROR_UNKNOWN_INSTRUCTION,instruction->data.header,instruction->data.value);
     else error_message_bypass_buffer(OUT_ERROR_UNKNOWN_INSTRUCTION,instruction->data.header,instruction->data.value);

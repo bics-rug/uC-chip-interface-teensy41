@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+
 ## [Unreleased]
 
 ### Added
@@ -12,6 +13,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 ### Changed
+
+### Removed
+
+### Deprecated
+
+## [0.9.2] - 2024-02-28
+
+### Added
+- uC_api object is now printable
+- warning if uc is faster in execution than PC can deliver new timed packages
+- headers can now be dynamically selected to print warning or info when they are created by PC or uC
+
+### Fixed
+- alignment was missbeaving, when actually miss aligned
+- responce improved by reading up to 20 packets per 1 write packet
+
+### Changed
+- alignment success responce needs to be triggered by sending allignment word after alignment sucess word, to prevent lockup
+- conformed buffer access to functions from core_ring_buffer.h only
+ - in instant mode (no exec time) the function activate from pin,i2c,spi and async now blocks and waits till the uC activated the interface 
 
 ### Removed
 
@@ -27,7 +48,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
  - trys to recover from misaligned communication if the byte sequence goes out of sync
  - data_i2c package fixed faulty value transmission (firmware) and encoding (api)
+ - write on busy serial connection does no longer block the worker thread, eg. from reading
  - typo in packet, variable visibility in thread
+
 
 
 ## [0.9.0] - 2023-10-13
