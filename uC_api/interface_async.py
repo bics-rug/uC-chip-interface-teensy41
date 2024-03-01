@@ -18,6 +18,7 @@
 
 from .header import ConfigMainHeader, Data32bitHeader, ConfigSubHeader
 from .packet import ConfigPacket, Data32bitPacket
+from time import sleep
 import logging, time
 
 class Interface_Async:
@@ -35,10 +36,10 @@ class Interface_Async:
         self.__status = 0
         self.__status_timestamp = 0
         # mode of the interface
-        # "4Phase_Chigh_Dhigh" means 4 phase clock with high active clock and high active data
-        # "4Phase_Clow_Dhigh" means 4 phase clock with low active clock and high active data
-        # "2Phase" means 2 phase clock with high active data
-        # "4Phase_MCP23017" means 4 phase clock with high active clock and high active data and MCP23017 port extender
+        # "4Phase_Chigh_Dhigh" means 4 phase handshake with high active handshake and high active data
+        # "4Phase_Clow_Dhigh" means 4 phase handshake with low active handshake and high active data
+        # "2Phase" means 2 phase handshake with high active data
+        # "4Phase_MCP23017" means 4 phase handshake with high active handshake and high active data and MCP23017 port extender
         # "NONE" means not set
         self.__mode = "NONE"
         self.__mode_timestamp = 0
@@ -315,12 +316,14 @@ class Interface_Async:
 
     def activate(self, req_pin, ack_pin, data_width, data_pins, mode="4Phase_Chigh_Dhigh", req_delay = 0, time = 0):
         """ activate the interface on the uC with the given parameters
+
+            waits for the activation to be acknolaged by the uC if no exec_time is given
             
             Mode: 
-            - "4Phase_Chigh_Dhigh" means 4 phase clock with high active clock and high active data
-            - "4Phase_Clow_Dhigh" means 4 phase clock with low active clock and high active data
-            - "2Phase" means 2 phase clock with high active data
-            - "4Phase_MCP23017" means 4 phase clock with high active clock and high active data and MCP23017 port extender, pin IDs are not used in this mode
+            - "4Phase_Chigh_Dhigh" means 4 phase handshake with high active handshake and high active data
+            - "4Phase_Clow_Dhigh" means 4 phase handshake with low active handshake and high active data
+            - "2Phase" means 2 phase handshake with high active data
+            - "4Phase_MCP23017" means 4 phase handshake with high active handshake and high active data and MCP23017 port extender, pin IDs are not used in this mode
 
             @param req_pin: request pin id on the uC
             @param ack_pin: ack pin id on the uC
@@ -363,6 +366,8 @@ class Interface_Async:
             self.__api.send_packet(ConfigPacket(header = self.__header[0], config_header = ConfigSubHeader.CONF_ACTIVE, time = time))
             # set the status to pending confirmation
             self.__status = 1
+            if time == 0:
+                self.__wait_for_activation()
 
     def send(self, word, time = 0):
         """ send a word to the chip
@@ -380,3 +385,23 @@ class Interface_Async:
 
     def update(self):
         self.__api.update_state()
+
+    def __wait_for_activation(self):
+        """ wait for the activation of the interface to be acknolaged by the uC
+        """
+        # bug need to push additional packets to get the uC to respond
+        # something is waiting on something else or idle - soft deadlock
+        self.__api.send_packet(Data32bitPacket(header = Data32bitHeader.IN_READ_TIME))
+        self.__api.send_packet(Data32bitPacket(header = Data32bitHeader.IN_READ_TIME))
+        self.__api.send_packet(Data32bitPacket(header = Data32bitHeader.IN_READ_TIME))
+        self.__api.send_packet(Data32bitPacket(header = Data32bitHeader.IN_READ_TIME))
+        self.__api.send_packet(Data32bitPacket(header = Data32bitHeader.IN_READ_TIME))
+        while True:
+            self.__api.update_state()
+            if self.__status == 2:
+                return
+            elif self.__status != 1:
+                break
+            if not self.__api.wait_for_data.wait(10):
+                logging.warning("Interface "+str(self.__header[0])+" activation was not acknolaged - 10 sec no responce from uC, status is "+str(self.__status))
+                return

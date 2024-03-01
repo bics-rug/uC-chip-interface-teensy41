@@ -33,8 +33,8 @@ class FIRMWARE_VERSION(enum.IntEnum):
     major and minor version need to match, patch version of the API can be lower than the (newer) firmware 
     """
     FIRMWARE_VERSION_MAJOR = 0
-    FIRMWARE_VERSION_MINOR = 9
-    FIRMWARE_VERSION_PATCH = 2
+    FIRMWARE_VERSION_MINOR = 10
+    FIRMWARE_VERSION_PATCH = 0
 
 class uC_api:
     """ 
@@ -68,6 +68,8 @@ class uC_api:
         self.__communication_thread = threading.Thread(target=self.__thread_function, args=(serial_port_path,))
         self.__last_timed_packet = 0
         self.__api_level = api_level
+        self.__setup_complete = threading.Event()
+        self.wait_for_data = threading.Event()
         if api_level == 2:
             # create all the interface objects
             self.errors = []
@@ -83,8 +85,10 @@ class uC_api:
             for async_id in range(8):
                 self.async_from_chip.append(Interface_Async(self,async_id,"FROM_CHIP"))
         self.__communication_thread.start()
-        # wait for 10 seconds for the uC to align
-        connection = False
+        # wait for 10+2 seconds for the uC to align, and block main thread until the connection is established
+        logging.info(self.__setup_complete.wait(12))
+        
+        
         
 
     def update_state(self):
@@ -132,6 +136,7 @@ class uC_api:
             if no_match:
                 self.errors.append(str(packet_to_process))
                 self.__read_buffer.task_done()
+        self.wait_for_data.clear()
 
     def __str__(self):
         self.update_state()
@@ -277,7 +282,7 @@ class uC_api:
                     if read_packet.original_header() != FIRMWARE_VERSION.FIRMWARE_VERSION_MAJOR or read_packet.original_sub_header() != FIRMWARE_VERSION.FIRMWARE_VERSION_MINOR or read_packet.value() < FIRMWARE_VERSION.FIRMWARE_VERSION_PATCH:
                         logging.warning("uC firmware version does not match the API version: \nfirmware version: "+str(read_packet.original_header())+"."+str(read_packet.original_sub_header())+"."+str(read_packet.value())+" \nAPI version: "+str(int(FIRMWARE_VERSION.FIRMWARE_VERSION_MAJOR))+"."+str(int(FIRMWARE_VERSION.FIRMWARE_VERSION_MINOR))+"."+str(int(FIRMWARE_VERSION.FIRMWARE_VERSION_PATCH)))
                     # connection is established
-                    connection = True
+                    self.__setup_complete.set()
                     connection_state = True
                     return True
                 else:
@@ -286,6 +291,7 @@ class uC_api:
         # connection failed after 40 tries/10sec
         if connection_state == False:
             logging.error("uC is not responding for 10 sec, wrong port?, no permission?")
+            self.__setup_complete.set()
             return False
 
 
@@ -424,6 +430,7 @@ class uC_api:
                     # normal packet, send to the read buffer for further processing by the main thread
                     else:
                         self.__read_buffer.put(read_packet)
+                        self.wait_for_data.set()
                 else:
                     # set read loop slowdown condition flag, as there is nothing to read
                     idle_read = True

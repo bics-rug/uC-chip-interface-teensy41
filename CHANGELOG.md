@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 ### Changed
+ - in instant mode (no exec time) the function activate from pin,i2c,spi and async now blocks and waits till the uC activated the interface 
 
 ### Removed
 

@@ -16,8 +16,8 @@
 #    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-from .header import ConfigMainHeader, PinHeader, ConfigSubHeader
-from .packet import ConfigPacket, PinPacket
+from .header import ConfigMainHeader, PinHeader, ConfigSubHeader, Data32bitHeader
+from .packet import ConfigPacket, PinPacket, Data32bitPacket
 from time import sleep
 import logging
 
@@ -204,6 +204,9 @@ class Interface_PIN:
 
     def activate(self, pin_mode="OUTPUT", interval=0, time=0):
         """ activate the pin with the given mode and interval
+
+            waits for the activation to be acknolaged by the uC if no exec_time is given
+
             @param pin_mode: the mode of the pin, can be "INPUT", "OUTPUT" and future "PWM", "ANALOG_INPUT", "ANALOG_OUTPUT"
             @param interval: the interval for the pin, not yet implemented
             @param time: the time when the activation should be done, 0 means as soon as possible
@@ -215,13 +218,15 @@ class Interface_PIN:
                 self.__api.send_packet(ConfigPacket(header = self.__header[0], config_header = ConfigSubHeader.CONF_OUTPUT, value=self.__pin_id, time = time))
                 self.__status = 1
                 self.__type_pending = pin_mode
-                sleep(0.001)
+                if time == 0:
+                    self.__wait_for_activation()
                 return
             elif pin_mode == "INPUT":
                 self.__api.send_packet(ConfigPacket(header = self.__header[0], config_header = ConfigSubHeader.CONF_INPUT, value=self.__pin_id,time = time))
                 self.__status = 1
                 self.__type_pending = pin_mode
-                sleep(0.001)
+                if time == 0:
+                    self.__wait_for_activation()
                 return
             # in the future implement the following
             elif pin_mode == "PWM":
@@ -252,3 +257,24 @@ class Interface_PIN:
         """ update the internal state representation of the pin object
         """
         self.__api.update_state()
+
+    def __wait_for_activation(self):
+        """ wait for the activation of the interface to be acknolaged by the uC
+        """
+        # bug need to push additional packets to get the uC to respond
+        # something is waiting on something else or idle - soft deadlock
+        self.__api.send_packet(Data32bitPacket(header = Data32bitHeader.IN_READ_TIME))
+        self.__api.send_packet(Data32bitPacket(header = Data32bitHeader.IN_READ_TIME))
+        self.__api.send_packet(Data32bitPacket(header = Data32bitHeader.IN_READ_TIME))
+        self.__api.send_packet(Data32bitPacket(header = Data32bitHeader.IN_READ_TIME))
+        self.__api.send_packet(Data32bitPacket(header = Data32bitHeader.IN_READ_TIME))
+        while True:
+            self.__api.update_state()
+            if self.__status == 2:
+                return
+            elif self.__status != 1:
+                break
+            if not self.__api.wait_for_data.wait(10):
+                logging.warning("Pin "+str(self.__pin_id)+" activation was not acknolaged - 10 sec no responce from uC, status is "+str(self.__status))
+                return
+        

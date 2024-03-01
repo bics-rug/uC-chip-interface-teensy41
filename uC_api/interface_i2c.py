@@ -19,6 +19,7 @@
 
 from .header import ConfigMainHeader, DataI2CHeader, ConfigSubHeader
 from .packet import ConfigPacket, DataI2CPacket
+from time import sleep
 import logging
 
 class Interface_I2C:
@@ -232,6 +233,9 @@ class Interface_I2C:
 
     def activate(self, speed=400000, order="LSBFIRST", number_of_bytes=1, time=0):
         """ Activat the I2C interface and configure it with the given speed, byte order and number of bytes
+        
+        waits for the activation to be acknolaged by the uC if no exec_time is given
+
         @param speed: the speed of the I2C interface possible values are 10000, 100000, 400000, 1000000, 3400000
         @param order: the byte order of the I2C interface possible values are "LSBFIRST" or "MSBFIRST"
         @param number_of_bytes: the protocol data word width of the I2C interface possible values are 1 or 2
@@ -265,6 +269,8 @@ class Interface_I2C:
             # and activate            
             self.__api.send_packet(ConfigPacket(header = self.__header[0], config_header = ConfigSubHeader.CONF_ACTIVE,time = time))
             self.__status = 1
+            if time == 0:
+                self.__wait_for_activation()
 
     def send_write(self,device_address, register_address, word, time = 0):
         """ Send a write request on the I2C interface
@@ -298,3 +304,23 @@ class Interface_I2C:
         """ update the data repersentation of the API object
         """
         self.__api.update_state()
+
+    def __wait_for_activation(self):
+        """ wait for the activation of the interface to be acknolaged by the uC
+        """
+        # bug need to push additional packets to get the uC to respond
+        # something is waiting on something else or idle - soft deadlock
+        self.__api.send_packet(Data32bitPacket(header = Data32bitHeader.IN_READ_TIME))
+        self.__api.send_packet(Data32bitPacket(header = Data32bitHeader.IN_READ_TIME))
+        self.__api.send_packet(Data32bitPacket(header = Data32bitHeader.IN_READ_TIME))
+        self.__api.send_packet(Data32bitPacket(header = Data32bitHeader.IN_READ_TIME))
+        self.__api.send_packet(Data32bitPacket(header = Data32bitHeader.IN_READ_TIME))
+        while True:
+            self.__api.update_state()
+            if self.__status == 2:
+                return
+            elif self.__status != 1:
+                break
+            if not self.__api.wait_for_data.wait(10):
+                logging.warning("Interface "+str(self.__header[0])+" activation was not acknolaged - 10 sec no responce from uC, status is "+str(self.__status))
+                return

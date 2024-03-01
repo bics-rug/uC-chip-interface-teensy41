@@ -18,6 +18,7 @@
 
 from .header import ConfigMainHeader, Data32bitHeader, ConfigSubHeader
 from .packet import ConfigPacket, Data32bitPacket
+from time import sleep
 import logging
 
 class Interface_SPI:
@@ -235,6 +236,8 @@ class Interface_SPI:
         """activate activates and configures the interface, 
         if the interface is not availible on the UC it will put its state in en error state and prevent further use
 
+        waits for the activation to be acknolaged by the uC if no exec_time is given
+
         :param mode: choose between "SPI_MODE0" "SPI_MODE1" "SPI_MODE2" or "SPI_MODE3" see arduino SPI docs, defaults to "SPI_MODE0"
         :type mode: str, optional
         :param speed_class: 0-8 0:10kHz 1:50kHz 2:100kHz 3:500kHz 4:1MHz 5:2MHz 6:4MHz 7:8MHz 8:12MHz, defaults to 0
@@ -257,6 +260,8 @@ class Interface_SPI:
             self.__api.send_packet(ConfigPacket(header = self.__header[0], config_header = ConfigSubHeader.CONF_WIDTH,value=number_of_bytes,time = time))
             self.__api.send_packet(ConfigPacket(header = self.__header[0], config_header = ConfigSubHeader.CONF_ACTIVE,time = time))
             self.__status = 1
+            if time == 0:
+                self.__wait_for_activation()
 
     def send(self, word, time = 0):
         """send send a word via this interface
@@ -276,3 +281,23 @@ class Interface_SPI:
         """update updates the internal state form the uC
         """
         self.__api.update_state()
+
+    def __wait_for_activation(self):
+        """ wait for the activation of the interface to be acknolaged by the uC
+        """
+        # bug need to push additional packets to get the uC to respond
+        # something is waiting on something else or idle - soft deadlock
+        self.__api.send_packet(Data32bitPacket(header = Data32bitHeader.IN_READ_TIME))
+        self.__api.send_packet(Data32bitPacket(header = Data32bitHeader.IN_READ_TIME))
+        self.__api.send_packet(Data32bitPacket(header = Data32bitHeader.IN_READ_TIME))
+        self.__api.send_packet(Data32bitPacket(header = Data32bitHeader.IN_READ_TIME))
+        self.__api.send_packet(Data32bitPacket(header = Data32bitHeader.IN_READ_TIME))
+        while True:
+            self.__api.update_state()
+            if self.__status == 2:
+                return
+            elif self.__status != 1:
+                break
+            if not self.__api.wait_for_data.wait(10):
+                logging.warning("Interface "+str(self.__header[0])+" activation was not acknolaged - 10 sec no responce from uC, status is "+str(self.__status))
+                return

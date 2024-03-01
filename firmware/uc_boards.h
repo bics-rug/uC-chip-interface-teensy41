@@ -21,8 +21,8 @@
 
 enum firmware_version : uint8_t {
   VERSION_MAJOR = 0U,
-  VERSION_MINOR = 9U,
-  VERSION_PATCH = 2U,
+  VERSION_MINOR = 10U,
+  VERSION_PATCH = 0U,
 };
 
 #if defined(ARDUINO_TEENSY41) 
