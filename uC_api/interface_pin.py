@@ -245,12 +245,10 @@ class Interface_PIN:
             @param value: the value to set the pin to, 0 or 1
             @param time: the time when the value should be set, 0 means as soon as possible
         """
-        self.__api.update_state()
-        # only precede if the pin is activated or pending activation for timed events
-        if (time == 0 and self.__status == 2 and (self.__type == "OUTPUT" or self.__type == "ANALOG_OUTPUT")) or (time > 0 and self.__status >= 1 and (self.__type_pending == "OUTPUT" or self.__type_pending == "ANALOG_OUTPUT")):
-            self.__api.send_packet(PinPacket(header = self.__header[1],pin_id=self.__pin_id , value = value, time = time))
-        else:
-            logging.error("Pin "+str(self.__pin_id)+" is not in OUTPUT/ANALOG_OUTPUT mode - data is not sent.")
+
+        # we dont check the status here anymore as the uC will report the error anyway
+        self.__api.send_packet(PinPacket(header = self.__header[1],pin_id=self.__pin_id , value = value, time = time))
+
 
 
     def update(self):

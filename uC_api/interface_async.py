@@ -376,10 +376,9 @@ class Interface_Async:
         """
         self.update()
         if self.__direction == "TO_CHIP":
-            if (time == 0 and self.__status == 2) or (time > 0 and self.__status >= 1):
-                self.__api.send_packet(Data32bitPacket(header = self.__header[1], value = word, time = time))
-            else:
-                logging.error("AER to chip interface "+str(self.__header[1])+" is not active, please activate first - word is not sent.")
+            # we dont check the status here anymore as the uC will report the error anyway
+            self.__api.send_packet(Data32bitPacket(header = self.__header[1], value = word, time = time))
+
         else:
             logging.error("AER to chip interface "+str(self.__header[1])+" is reading interface - word is not sent.")
 

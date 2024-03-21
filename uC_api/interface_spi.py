@@ -271,11 +271,9 @@ class Interface_SPI:
         :param time: the time in us after start_experiment when this word should be send, defaults to 0 (execute instantly)
         :type time: int, optional
         """
-        self.__api.update_state()
-        if (time == 0 and self.__status == 2) or (time > 0 and self.__status >= 1):
-            self.__api.send_packet(Data32bitPacket(header = self.__header[1], value = word, time = time))
-        else:
-            logging.error("SPI interface "+str(self.__header[1])+" is not active, please activate first - word is not sent.")
+        # we dont check the status here anymore as the uC will report the error anyway
+        self.__api.send_packet(Data32bitPacket(header = self.__header[1], value = word, time = time))
+
 
     def update(self):
         """update updates the internal state form the uC
