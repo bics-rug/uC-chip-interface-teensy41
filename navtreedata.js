@@ -26,13 +26,13 @@ var NAVTREE =
 [
   [ "uC chip interface arduino", "index.html", [
     [ "Overview", "index.html", [
-      [ "A PC interface for small and simple async and neuromorphic IC test chips", "index.html#autotoc_md27", null ],
-      [ "Key features", "index.html#autotoc_md28", null ],
-      [ "Currently supported uC (MicroController)", "index.html#autotoc_md29", null ],
-      [ "Project home", "index.html#autotoc_md30", null ],
-      [ "Documentation", "index.html#autotoc_md31", null ],
-      [ "Known bugs and comming features", "index.html#autotoc_md32", null ],
-      [ "How to contribute", "index.html#autotoc_md33", null ]
+      [ "A PC interface for small and simple async and neuromorphic IC test chips", "index.html#autotoc_md36", null ],
+      [ "Key features", "index.html#autotoc_md37", null ],
+      [ "Currently supported uC (MicroController)", "index.html#autotoc_md38", null ],
+      [ "Project home", "index.html#autotoc_md39", null ],
+      [ "Documentation", "index.html#autotoc_md40", null ],
+      [ "Known bugs and comming features", "index.html#autotoc_md41", null ],
+      [ "How to contribute", "index.html#autotoc_md42", null ]
     ] ],
     [ "The PC <–usb--> uC protocol", "md_10_communication_protocol.html", null ],
     [ "API levels", "md_20_api_levels.html", [
@@ -57,23 +57,39 @@ var NAVTREE =
         [ "Removed", "md__github_workspace_CHANGELOG.html#autotoc_md17", null ],
         [ "Deprecated", "md__github_workspace_CHANGELOG.html#autotoc_md18", null ]
       ] ],
-      [ "[0.9.0] - 2023-10-13", "md__github_workspace_CHANGELOG.html#autotoc_md19", [
+      [ "[0.9.2] - 2024-02-28", "md__github_workspace_CHANGELOG.html#autotoc_md19", [
         [ "Added", "md__github_workspace_CHANGELOG.html#autotoc_md20", null ],
         [ "Fixed", "md__github_workspace_CHANGELOG.html#autotoc_md21", null ],
         [ "Changed", "md__github_workspace_CHANGELOG.html#autotoc_md22", null ],
-        [ "Removed", "md__github_workspace_CHANGELOG.html#autotoc_md23", null ]
+        [ "Removed", "md__github_workspace_CHANGELOG.html#autotoc_md23", null ],
+        [ "Deprecated", "md__github_workspace_CHANGELOG.html#autotoc_md24", null ]
       ] ],
-      [ "[0.1.0] - 2023-01-25", "md__github_workspace_CHANGELOG.html#autotoc_md24", [
-        [ "Added", "md__github_workspace_CHANGELOG.html#autotoc_md25", null ]
+      [ "[0.9.1] - 2024-02-18", "md__github_workspace_CHANGELOG.html#autotoc_md25", [
+        [ "Added", "md__github_workspace_CHANGELOG.html#autotoc_md26", null ],
+        [ "Fixed", "md__github_workspace_CHANGELOG.html#autotoc_md27", null ]
+      ] ],
+      [ "[0.9.0] - 2023-10-13", "md__github_workspace_CHANGELOG.html#autotoc_md28", [
+        [ "Added", "md__github_workspace_CHANGELOG.html#autotoc_md29", null ],
+        [ "Fixed", "md__github_workspace_CHANGELOG.html#autotoc_md30", null ],
+        [ "Changed", "md__github_workspace_CHANGELOG.html#autotoc_md31", null ],
+        [ "Removed", "md__github_workspace_CHANGELOG.html#autotoc_md32", null ]
+      ] ],
+      [ "[0.1.0] - 2023-01-25", "md__github_workspace_CHANGELOG.html#autotoc_md33", [
+        [ "Added", "md__github_workspace_CHANGELOG.html#autotoc_md34", null ]
       ] ]
     ] ],
     [ "TODO", "md__github_workspace_TODO.html", [
-      [ "A list of planned extensions:", "md__github_workspace_TODO.html#autotoc_md35", null ],
-      [ "only on request and need", "md__github_workspace_TODO.html#autotoc_md36", null ],
-      [ "implemented or discarded", "md__github_workspace_TODO.html#autotoc_md37", null ]
+      [ "A list of planned extensions:", "md__github_workspace_TODO.html#autotoc_md44", null ],
+      [ "only on request and need", "md__github_workspace_TODO.html#autotoc_md45", null ],
+      [ "implemented or discarded", "md__github_workspace_TODO.html#autotoc_md46", null ]
     ] ],
     [ "Packages", "namespaces.html", [
-      [ "Package List", "namespaces.html", "namespaces_dup" ]
+      [ "Package List", "namespaces.html", "namespaces_dup" ],
+      [ "Package Members", "namespacemembers.html", [
+        [ "All", "namespacemembers.html", null ],
+        [ "Functions", "namespacemembers_func.html", null ],
+        [ "Variables", "namespacemembers_vars.html", null ]
+      ] ]
     ] ],
     [ "Classes", "annotated.html", [
       [ "Class List", "annotated.html", "annotated_dup" ],
@@ -103,8 +119,9 @@ var NAVTREEINDEX =
 [
 "____init_____8py.html",
 "classuC__api_1_1packet_1_1Data32bitPacket.html",
-"datatypes_8h.html#a0b2184da6193308c460c2888935689f4a6d572744f85e926b96d8fd9ef42725c8",
-"interface__pin_8cpp.html#a63f5c9d7efd217c21b6f5b25534e9d00"
+"datatypes_8h.html#a0b2184da6193308c460c2888935689f4a39d10f7449571d3e79bdc42bfddc86a8",
+"interface__i2c_8py_source.html",
+"uc__boards_8h.html#a4f66e15d0528064dc882c239a97580c2ab026362f3f1670956c2474b4d54692a1"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronisation';

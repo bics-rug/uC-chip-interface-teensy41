@@ -141,6 +141,8 @@ Public Member Functions</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-static-attribs" name="pub-static-attribs"></a>
 Static Public Attributes</h2></td></tr>
+<tr class="memitem:a3a8a7fa903e10a21bf2228d05da564da"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classuC__api_1_1header_1_1ErrorHeader.html#a3a8a7fa903e10a21bf2228d05da564da">OUT_ALIGN_SUCCESS_VERSION</a></td></tr>
+<tr class="separator:a3a8a7fa903e10a21bf2228d05da564da"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a61b1a9cd87bb8bde82a1d350b01fab51"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classuC__api_1_1header_1_1ErrorHeader.html#a61b1a9cd87bb8bde82a1d350b01fab51">OUT_ERROR</a></td></tr>
 <tr class="separator:a61b1a9cd87bb8bde82a1d350b01fab51"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae41510d2a7a0877e507d069496057486"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classuC__api_1_1header_1_1ErrorHeader.html#ae41510d2a7a0877e507d069496057486">OUT_ERROR_ASYNC_HS_TIMEOUT</a></td></tr>
@@ -175,7 +177,7 @@ Static Public Attributes</h2></td></tr>
 <p >Errors are issued by the <a class="el" href="namespaceuC__api_1_1uC.html">uC</a> to tell the user what went wrong. The description explains the meaning of the individual errors.</p>
 <p >the causing errors can be found in org_header and org_sub_header the causeing valuse is stored in value, if a value does not make sense for that error class it is the current timestamp of the <a class="el" href="namespaceuC__api_1_1uC.html">uC</a>. </p>
 
-<p class="definition">Definition at line <a class="el" href="header_8py_source.html#l00579">579</a> of file <a class="el" href="header_8py_source.html">header.py</a>.</p>
+<p class="definition">Definition at line <a class="el" href="header_8py_source.html#l00580">580</a> of file <a class="el" href="header_8py_source.html">header.py</a>.</p>
 </div><h2 class="groupheader">Member Function Documentation</h2>
 <a id="a8d1c20a5c6543f8e4e9a05dc8d35585b" name="a8d1c20a5c6543f8e4e9a05dc8d35585b"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a8d1c20a5c6543f8e4e9a05dc8d35585b">&#9670;&#160;</a></span>__new__()</h2>
@@ -211,11 +213,44 @@ Static Public Attributes</h2></td></tr>
 
 <p>overwrite to enable <b>doc</b> strings for enum elements as second argument. </p>
 
-<p class="definition">Definition at line <a class="el" href="header_8py_source.html#l00591">591</a> of file <a class="el" href="header_8py_source.html">header.py</a>.</p>
+<p class="definition">Definition at line <a class="el" href="header_8py_source.html#l00592">592</a> of file <a class="el" href="header_8py_source.html">header.py</a>.</p>
 
 </div>
 </div>
 <h2 class="groupheader">Member Data Documentation</h2>
+<a id="a3a8a7fa903e10a21bf2228d05da564da" name="a3a8a7fa903e10a21bf2228d05da564da"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3a8a7fa903e10a21bf2228d05da564da">&#9670;&#160;</a></span>OUT_ALIGN_SUCCESS_VERSION</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">int OUT_ALIGN_SUCCESS_VERSION</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<b>Initial value:</b><div class="fragment"><div class="line">=  253, <span class="stringliteral">&quot;&quot;&quot;</span></div>
+<div class="line"><span class="stringliteral">     responce to alignment request, </span><span class="keyword">as</span> the first communication <span class="keywordflow">is</span> an alignment</div>
+<div class="line">     confirms the connection <span class="keyword">with</span> the uC.</div>
+<div class="line">     also sends the firmware version - to see <span class="keywordflow">if</span> the correct version <span class="keywordflow">is</span> running</div>
+<div class="line">     uses error_package</div>
+<div class="line">      - org_header - major version - 8bit</div>
+<div class="line">      - sub_header - minor version - 8bit</div>
+<div class="line">      - value - patch version - 32bit</div>
+<div class="line">    <span class="stringliteral">&quot;&quot;&quot;</span></div>
+</div><!-- fragment -->
+<p class="definition">Definition at line <a class="el" href="header_8py_source.html#l00688">688</a> of file <a class="el" href="header_8py_source.html">header.py</a>.</p>
+
+</div>
+</div>
 <a id="a61b1a9cd87bb8bde82a1d350b01fab51" name="a61b1a9cd87bb8bde82a1d350b01fab51"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a61b1a9cd87bb8bde82a1d350b01fab51">&#9670;&#160;</a></span>OUT_ERROR</h2>
 
@@ -239,7 +274,7 @@ Static Public Attributes</h2></td></tr>
 <div class="line"><span class="stringliteral">     unspecified error.</span></div>
 <div class="line"><span class="stringliteral">    &quot;&quot;&quot;</span></div>
 </div><!-- fragment -->
-<p class="definition">Definition at line <a class="el" href="header_8py_source.html#l00601">601</a> of file <a class="el" href="header_8py_source.html">header.py</a>.</p>
+<p class="definition">Definition at line <a class="el" href="header_8py_source.html#l00602">602</a> of file <a class="el" href="header_8py_source.html">header.py</a>.</p>
 
 </div>
 </div>
@@ -267,7 +302,7 @@ Static Public Attributes</h2></td></tr>
 <div class="line">    it reset the request so you should take care off restarting/resetting the DuT</div>
 <div class="line">    <span class="stringliteral">&quot;&quot;&quot;</span></div>
 </div><!-- fragment -->
-<p class="definition">Definition at line <a class="el" href="header_8py_source.html#l00656">656</a> of file <a class="el" href="header_8py_source.html">header.py</a>.</p>
+<p class="definition">Definition at line <a class="el" href="header_8py_source.html#l00657">657</a> of file <a class="el" href="header_8py_source.html">header.py</a>.</p>
 
 </div>
 </div>
@@ -296,7 +331,7 @@ Static Public Attributes</h2></td></tr>
 <div class="line">    - id <span class="keywordflow">is</span> the wrong id</div>
 <div class="line">    <span class="stringliteral">&quot;&quot;&quot;</span></div>
 </div><!-- fragment -->
-<p class="definition">Definition at line <a class="el" href="header_8py_source.html#l00667">667</a> of file <a class="el" href="header_8py_source.html">header.py</a>.</p>
+<p class="definition">Definition at line <a class="el" href="header_8py_source.html#l00668">668</a> of file <a class="el" href="header_8py_source.html">header.py</a>.</p>
 
 </div>
 </div>
@@ -325,7 +360,7 @@ Static Public Attributes</h2></td></tr>
 <div class="line">      - the wrong data</div>
 <div class="line">    <span class="stringliteral">&quot;&quot;&quot;</span></div>
 </div><!-- fragment -->
-<p class="definition">Definition at line <a class="el" href="header_8py_source.html#l00673">673</a> of file <a class="el" href="header_8py_source.html">header.py</a>.</p>
+<p class="definition">Definition at line <a class="el" href="header_8py_source.html#l00674">674</a> of file <a class="el" href="header_8py_source.html">header.py</a>.</p>
 
 </div>
 </div>
@@ -353,7 +388,7 @@ Static Public Attributes</h2></td></tr>
 <div class="line">    <span class="keywordflow">and</span> you cant send more instructions, the instruction send will be discarded</div>
 <div class="line">    <span class="stringliteral">&quot;&quot;&quot;</span></div>
 </div><!-- fragment -->
-<p class="definition">Definition at line <a class="el" href="header_8py_source.html#l00619">619</a> of file <a class="el" href="header_8py_source.html">header.py</a>.</p>
+<p class="definition">Definition at line <a class="el" href="header_8py_source.html#l00620">620</a> of file <a class="el" href="header_8py_source.html">header.py</a>.</p>
 
 </div>
 </div>
@@ -383,7 +418,7 @@ Static Public Attributes</h2></td></tr>
 <div class="line">    a new uC_api object after to reestablish a new connection after the uC reset.</div>
 <div class="line">    <span class="stringliteral">&quot;&quot;&quot;</span></div>
 </div><!-- fragment -->
-<p class="definition">Definition at line <a class="el" href="header_8py_source.html#l00629">629</a> of file <a class="el" href="header_8py_source.html">header.py</a>.</p>
+<p class="definition">Definition at line <a class="el" href="header_8py_source.html#l00630">630</a> of file <a class="el" href="header_8py_source.html">header.py</a>.</p>
 
 </div>
 </div>
@@ -412,7 +447,7 @@ Static Public Attributes</h2></td></tr>
 <div class="line">    interface <span class="keywordflow">or</span> send the required configuration packets</div>
 <div class="line">    <span class="stringliteral">&quot;&quot;&quot;</span></div>
 </div><!-- fragment -->
-<p class="definition">Definition at line <a class="el" href="header_8py_source.html#l00643">643</a> of file <a class="el" href="header_8py_source.html">header.py</a>.</p>
+<p class="definition">Definition at line <a class="el" href="header_8py_source.html#l00644">644</a> of file <a class="el" href="header_8py_source.html">header.py</a>.</p>
 
 </div>
 </div>
@@ -440,7 +475,7 @@ Static Public Attributes</h2></td></tr>
 <div class="line">    the number of packets dropped you can read <span class="keyword">as</span> value</div>
 <div class="line">    <span class="stringliteral">&quot;&quot;&quot;</span></div>
 </div><!-- fragment -->
-<p class="definition">Definition at line <a class="el" href="header_8py_source.html#l00624">624</a> of file <a class="el" href="header_8py_source.html">header.py</a>.</p>
+<p class="definition">Definition at line <a class="el" href="header_8py_source.html#l00625">625</a> of file <a class="el" href="header_8py_source.html">header.py</a>.</p>
 
 </div>
 </div>
@@ -469,7 +504,7 @@ Static Public Attributes</h2></td></tr>
 <div class="line">    uses </div>
 <div class="line">    <span class="stringliteral">&quot;&quot;&quot;</span></div>
 </div><!-- fragment -->
-<p class="definition">Definition at line <a class="el" href="header_8py_source.html#l00661">661</a> of file <a class="el" href="header_8py_source.html">header.py</a>.</p>
+<p class="definition">Definition at line <a class="el" href="header_8py_source.html#l00662">662</a> of file <a class="el" href="header_8py_source.html">header.py</a>.</p>
 
 </div>
 </div>
@@ -501,7 +536,7 @@ Static Public Attributes</h2></td></tr>
 <div class="line">    a new uC_api object after to reestablish a new connection after the uC reset.</div>
 <div class="line">    <span class="stringliteral">&quot;&quot;&quot;</span></div>
 </div><!-- fragment -->
-<p class="definition">Definition at line <a class="el" href="header_8py_source.html#l00605">605</a> of file <a class="el" href="header_8py_source.html">header.py</a>.</p>
+<p class="definition">Definition at line <a class="el" href="header_8py_source.html#l00606">606</a> of file <a class="el" href="header_8py_source.html">header.py</a>.</p>
 
 </div>
 </div>
@@ -529,7 +564,7 @@ Static Public Attributes</h2></td></tr>
 <div class="line">    please call pin[X].activate(&lt;options&gt;) before useing the pin <span class="keywordflow">or</span> send the required config packets. </div>
 <div class="line">    <span class="stringliteral">&quot;&quot;&quot;</span></div>
 </div><!-- fragment -->
-<p class="definition">Definition at line <a class="el" href="header_8py_source.html#l00614">614</a> of file <a class="el" href="header_8py_source.html">header.py</a>.</p>
+<p class="definition">Definition at line <a class="el" href="header_8py_source.html#l00615">615</a> of file <a class="el" href="header_8py_source.html">header.py</a>.</p>
 
 </div>
 </div>
@@ -559,7 +594,7 @@ Static Public Attributes</h2></td></tr>
 <div class="line">    maybe your API <span class="keywordflow">and</span> firmware verions are out of sync</div>
 <div class="line">    <span class="stringliteral">&quot;&quot;&quot;</span></div>
 </div><!-- fragment -->
-<p class="definition">Definition at line <a class="el" href="header_8py_source.html#l00649">649</a> of file <a class="el" href="header_8py_source.html">header.py</a>.</p>
+<p class="definition">Definition at line <a class="el" href="header_8py_source.html#l00650">650</a> of file <a class="el" href="header_8py_source.html">header.py</a>.</p>
 
 </div>
 </div>
@@ -589,7 +624,7 @@ Static Public Attributes</h2></td></tr>
 <div class="line">    maybe your API <span class="keywordflow">and</span> firmware verions are out of sync</div>
 <div class="line">    <span class="stringliteral">&quot;&quot;&quot;</span></div>
 </div><!-- fragment -->
-<p class="definition">Definition at line <a class="el" href="header_8py_source.html#l00636">636</a> of file <a class="el" href="header_8py_source.html">header.py</a>.</p>
+<p class="definition">Definition at line <a class="el" href="header_8py_source.html#l00637">637</a> of file <a class="el" href="header_8py_source.html">header.py</a>.</p>
 
 </div>
 </div>
@@ -620,7 +655,7 @@ Static Public Attributes</h2></td></tr>
 <div class="line">    data collection. this warning only send once.</div>
 <div class="line">    <span class="stringliteral">&quot;&quot;&quot;</span></div>
 </div><!-- fragment -->
-<p class="definition">Definition at line <a class="el" href="header_8py_source.html#l00679">679</a> of file <a class="el" href="header_8py_source.html">header.py</a>.</p>
+<p class="definition">Definition at line <a class="el" href="header_8py_source.html#l00680">680</a> of file <a class="el" href="header_8py_source.html">header.py</a>.</p>
 
 </div>
 </div>
