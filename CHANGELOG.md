@@ -14,6 +14,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+ - api will no longer check if an interface is active before writing to it (creates unwanted corner cases) => the uC is responcible for reporting that error!
+
+
 ### Removed
 
 ### Deprecated
@@ -32,7 +35,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - alignment success responce needs to be triggered by sending allignment word after alignment sucess word, to prevent lockup
 - conformed buffer access to functions from core_ring_buffer.h only
- - in instant mode (no exec time) the function activate from pin,i2c,spi and async now blocks and waits till the uC activated the interface 
 
 ### Removed
 

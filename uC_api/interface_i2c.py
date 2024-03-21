@@ -273,12 +273,9 @@ class Interface_I2C:
         @param word: the word to write (8 or 16 bit depending on the number of bytes configured)
         @param time: the time when the write request should be processed by the uC (0 means as soon as possible)
         """
-        self.__api.update_state()
-        # if the interface is active or waiting activation in case of a timed event, send the word
-        if (time == 0 and self.__status == 2) or (time > 0 and self.__status >= 1):
-            self.__api.send_packet(DataI2CPacket(self.__header[1], device_address=device_address, register_address=register_address,read=0,value=word,time=time))
-        else:
-            logging.error("I2C interface "+str(self.__header[1])+" is not active, please activate first - word is not sent.")
+        # we dont check the status here anymore as the uC will report the error anyway
+        self.__api.send_packet(DataI2CPacket(self.__header[1], device_address=device_address, register_address=register_address,read=0,value=word,time=time))
+
 
     def send_read_request(self, device_address, register_address, word, time = 0):
         """ Send a read request on the I2C interface
@@ -287,12 +284,8 @@ class Interface_I2C:
         @param word: ?
         @param time: the time when the read request should be processed by the uC (0 means as soon as possible)
         """
-        self.__api.update_state()
-        # if the interface is active or waiting activation in case of a timed event, send the word
-        if (time == 0 and self.__status == 2) or (time > 0 and self.__status >= 1):
-            self.__api.send_packet(DataI2CPacket(self.__header[1], device_address=device_address, register_address=register_address,read=1,value=word,time=time))
-        else:
-            logging.error("I2C interface "+str(self.__header[2])+" is not active, please activate first - word is not sent.")
+        # we dont check the status here anymore as the uC will report the error anyway
+        self.__api.send_packet(DataI2CPacket(self.__header[1], device_address=device_address, register_address=register_address,read=1,value=word,time=time))
 
     def update(self):
         """ update the data repersentation of the API object
