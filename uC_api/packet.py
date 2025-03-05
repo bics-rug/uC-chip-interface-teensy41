@@ -427,8 +427,12 @@ class ConfigPacket(Packet):
         """
         if (header in ConfigMainHeader):
             self._header = header
+        elif(header >= ConfigMainHeader.SAVE_MAPPING_TABLE_MIN and header <= ConfigMainHeader.SAVE_MAPPING_TABLE_MAX):
+            self._header = header
+            
         else:
             logging.error("header "+str(header)+" is not a valid header")
+            print(header)
 
     def set_config_header(self, config_header):
         """ setter method for the sub instruction config_header attribute
@@ -436,9 +440,14 @@ class ConfigPacket(Packet):
         """
         if (config_header in ConfigSubHeader):
             self._config_header = config_header
+        elif(config_header >= ConfigSubHeader.SAVE_MAPPING_TABLE_MIN and config_header <= ConfigSubHeader.SAVE_MAPPING_TABLE_MAX):
+            self._config_header = config_header
+            
         else:
-            logging.error("config sub header "+str(header) +
+            logging.error("config sub header "+str(config_header) +
                           " is not a valid header")
+            print(config_header)
+            
 
     def set_value(self, value):
         """ setter method for the value attribute

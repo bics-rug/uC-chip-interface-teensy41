@@ -109,6 +109,7 @@ class uC_api:
         # wait for 10 seconds for the uC to align
         self.__connection = False
 
+
     def update_state(self):
         """update_state This method processes all availible messages from the uC and updates the internal representaion
         in detail it distributes the recorded packages to the coresponding interfaces for processing.
@@ -168,6 +169,7 @@ class uC_api:
             "\napilevel: " + str(self.__api_level) + \
             "\nERRORS: "+str(self.errors) + "\n"
 
+
     def start_experiment(self):
         """start_experiment This will reset the uC clock, enable that data is collected and that timed instructions are executed by the uC
         latest after 72min stop_experiment has to be called, after which a new experiment can be programmed and the function can be called again.
@@ -179,6 +181,7 @@ class uC_api:
         packet_to_send = Data32bitPacket(
             header=Data32bitHeader.IN_SET_TIME, value=1)
         self.send_packet(packet_to_send)
+
 
     def stop_experiment(self, time=0):
         """stop_experiment this will stop recording and flush all not jet excecuted timed instructions
@@ -194,6 +197,7 @@ class uC_api:
             header=Data32bitHeader.IN_SET_TIME, value=0, time=time)
         self.send_packet(packet_to_send)
 
+
     def experiment_state(self):
         """experiment_state returns the state history
 
@@ -205,6 +209,7 @@ class uC_api:
         :rtype: ([int],[int])
         """
         return (self.__experiment_state, self.__experiment_state_timestamp)
+
 
     def send_packet(self, packet_to_send):
         """send_packet send a packet to the uC via the "infinite" buffer
@@ -226,6 +231,7 @@ class uC_api:
                 logging.warning(
                     "the instructions are not sorted in time - execution order will be inconsistent")
 
+
     def read_packet(self):
         """read_packet returns one package from the uC via the "infinte" buffer
 
@@ -241,6 +247,7 @@ class uC_api:
         else:
             logging.error(
                 "reading raw packets is only availible in API level 1")
+
 
     def has_packet(self):
         """has_packet checks if a packet is availible for reading from the buffer
@@ -269,6 +276,7 @@ class uC_api:
         # wait for the worker thread to close the connection
         self.__communication_thread.join()
 
+
     def reset(self):
         """reset uC and hope the serial connection survives
         """
@@ -277,6 +285,7 @@ class uC_api:
         # add reset to the experiment state history
         self.__experiment_state.append(-1)
         self.__experiment_state_timestamp.append(-1)
+
 
     def __check_first_connection(self, connection):
         """__check_first_connection checks if the uC is responding and prints the firmware version
@@ -332,6 +341,7 @@ class uC_api:
             # logging.error("uC is not responding for 10 sec, wrong port?, no permission?")
             logging.error("uC is not responding to first connection request")
             return False
+
 
     def __thread_function(self):
         """__thread_function internal function managing the actual async communication with the uC in the background

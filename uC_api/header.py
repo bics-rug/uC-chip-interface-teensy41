@@ -2,7 +2,8 @@
 # Copyright (C) 2022-2023 Ole Richter - University of Groningen
 # Copyright (C) 2024 Vincent Jassies - University of Groningen
 #
-# Last Update: 2025/02/27 - Vincent Jassies
+# Last Update: 2025/03/04 - Vincent Jassies
+# Added header for recurrency mapping table (SAVE_MAPPING_TABLE = 99)
 #
 # This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License
 # as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
@@ -316,6 +317,14 @@ class ConfigMainHeader(enum.IntEnum):
     IN_CONF_ASYNC_FROM_CHIP7 = 87, """
     Configures ASYNC_FROM_CHIP7.
     """
+    SAVE_MAPPING_TABLE_MIN = 100, """
+    Should store an entry of the mapping table to the AO microcontroller.
+    Any value between 101 and 180 indicates the mapping_tabel (100) and INPUT neuron address (1-80) 
+    """
+    SAVE_MAPPING_TABLE_MAX = 180, """
+    Should store an entry of the mapping table to the AO microcontroller.
+    Any value between 101 and 180 indicates the mapping_tabel (100) and INPUT neuron address (1-80) 
+    """
 
 
 @enum.unique
@@ -435,6 +444,15 @@ class ConfigSubHeader(enum.IntEnum):
     CONF_TYPE = 76, """
     Specifies the interface type (refer to interface documentation; default is 0).
     """
+    SAVE_MAPPING_TABLE_MIN = 100, """
+    Should store an entry of the mapping table to the AO microcontroller.
+    Any value between 101 and 180 indicates the mapping_tabel (100) and OUTPUT neuron address (1-80) 
+    """
+    SAVE_MAPPING_TABLE_MAX = 180, """
+    Should store an entry of the mapping table to the AO microcontroller.
+    Any value between 101 and 180 indicates the mapping_tabel (100) and OUTPUT neuron address (1-80) 
+    """
+    
     CONF_NONE = 255, "Indicates no sub-category."
     # Asynchronous data channel pin settings:
     CONF_CHANNEL0 = 0, "Sets the pin for Async data channel 0."
